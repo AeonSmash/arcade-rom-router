@@ -1,0 +1,96 @@
+/*
+ * Design tokens (SPEC.md section 57).
+ *
+ * Components reference these variables rather than literal colours or spacing,
+ * so a future theme pack changes only this file and never business logic.
+ *
+ * Visual direction: "modern arcade archive" -- deep neutral background,
+ * restrained neon accents, luminous status chips, high-contrast text.
+ */
+
+:root {
+  color-scheme: dark;
+
+  /* Surfaces */
+  --bg-0: #08090d;
+  --bg-1: #0d0f15;
+  --surface-1: #141821;
+  --surface-2: #1c2130;
+  --surface-3: #262c3d;
+  --surface-hover: #2d3446;
+
+  /* Text */
+  --text-primary: #f2f5fb;
+  --text-secondary: #a4adc2;
+  --text-tertiary: #6f7996;
+  --text-on-accent: #06070a;
+
+  /* Accents and status */
+  --accent: #4dd8ff;
+  --accent-strong: #7ce6ff;
+  --accent-dim: rgba(77, 216, 255, 0.14);
+  --success: #4ade80;
+  --success-dim: rgba(74, 222, 128, 0.14);
+  --warning: #fbbf24;
+  --warning-dim: rgba(251, 191, 36, 0.14);
+  --danger: #f87171;
+  --danger-dim: rgba(248, 113, 113, 0.14);
+  --unknown: #94a3b8;
+  --unknown-dim: rgba(148, 163, 184, 0.14);
+
+  /* Lines and focus */
+  --border-subtle: #232939;
+  --border-strong: #333c53;
+  --focus: #7ce6ff;
+  --focus-ring: 0 0 0 2px var(--bg-0), 0 0 0 4px var(--focus);
+
+  /* Radii */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 14px;
+
+  /* Spacing */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+
+  /* Typography */
+  --font-sans: "Segoe UI Variable Display", "Segoe UI", system-ui, -apple-system,
+    "Helvetica Neue", sans-serif;
+  --font-mono: "Cascadia Mono", "Consolas", ui-monospace, monospace;
+  --text-xs: 12px;
+  --text-sm: 13px;
+  --text-md: 15px;
+  --text-lg: 19px;
+  --text-xl: 24px;
+
+  /* Motion */
+  --duration-fast: 120ms;
+  --duration-medium: 220ms;
+  --easing: cubic-bezier(0.2, 0, 0, 1);
+
+  /* Layout */
+  --sidebar-width: 232px;
+  --header-height: 60px;
+  --row-height: 40px;
+}
+
+/* SPEC.md section 56: honour the operating system's reduced-motion setting. */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-fast: 0ms;
+    --duration-medium: 0ms;
+  }
+}
+
+@media (prefers-contrast: more) {
+  :root {
+    --text-secondary: #d4dae8;
+    --border-subtle: #4a5470;
+    --border-strong: #6b7793;
+  }
+}

@@ -1,0 +1,35 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+dist-ssr/
+src-tauri/target/
+src-tauri/gen/schemas/
+
+# Local databases and logs (never commit a user's library data)
+*.db
+*.db-wal
+*.db-shm
+logs/
+
+# ROM data must never enter the repository
+*.zip
+*.7z
+*.chd
+!tests/**/*.zip
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+*.local
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Environment
+.env
+.env.*
+
+# Local verification artifacts
+.app-screenshot.png
