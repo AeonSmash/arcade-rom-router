@@ -5,7 +5,12 @@
 //! parameterized (SPEC.md section 43.3).
 
 pub mod archives;
+pub mod dats;
+pub mod machines;
+pub mod matches;
+pub mod profiles;
 pub mod rom_roots;
+pub mod routes;
 pub mod scan_jobs;
 pub mod settings;
 

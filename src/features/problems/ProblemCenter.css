@@ -1,0 +1,36 @@
+.problem-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--space-3);
+}
+
+.problem-card {
+  display: flex;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  background: var(--surface-1);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+}
+
+.problem-count {
+  font-size: var(--text-xl);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent);
+  min-width: 2ch;
+}
+
+.problem-label {
+  margin: 0 0 var(--space-1);
+  font-weight: 600;
+}
+
+.problem-detail {
+  margin: 0;
+  color: var(--text-tertiary);
+  font-size: var(--text-sm);
+}

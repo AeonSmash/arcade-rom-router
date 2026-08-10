@@ -364,6 +364,14 @@ pub async fn summary(pool: &SqlitePool) -> AppResult<LibrarySummary> {
     })
 }
 
+pub async fn get(pool: &SqlitePool, id: i64) -> AppResult<Option<ArchiveRow>> {
+    let row = sqlx::query("SELECT * FROM archives WHERE id = ?1")
+        .bind(id)
+        .fetch_optional(pool)
+        .await?;
+    Ok(row.as_ref().map(map_archive_row))
+}
+
 pub async fn members(pool: &SqlitePool, archive_id: i64) -> AppResult<Vec<ArchiveMemberRow>> {
     let rows = sqlx::query(
         "SELECT * FROM archive_members WHERE archive_id = ?1 ORDER BY member_name COLLATE NOCASE",

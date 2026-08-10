@@ -1,10 +1,3 @@
-/**
- * Typed wrappers over the Tauri command surface.
- *
- * Every backend call goes through this module so component code never deals
- * with raw command names or untyped payloads.
- */
-
 import { invoke } from "@tauri-apps/api/core";
 
 import type {
@@ -13,19 +6,22 @@ import type {
   ArchiveMemberRow,
   ArchivePage,
   ArchiveState,
+  DatSource,
   DiagnosticEntry,
+  EmulatorProfile,
+  GameDetail,
+  HealthState,
+  LaunchResult,
   LibrarySummary,
+  ProblemSummary,
+  RetroArchDiscovery,
   RomRoot,
+  RoutePreferenceMode,
+  RouteRow,
   ScanMode,
   ScanProgress,
 } from "../types/api";
 
-/**
- * Recognises the structured error the backend returns.
- *
- * Anything else (a panic, a serialization failure) is presented as an internal
- * error rather than leaking a raw string into the interface.
- */
 export function toAppError(error: unknown): AppErrorPayload {
   if (
     typeof error === "object" &&
@@ -80,4 +76,41 @@ export const api = {
   getSettings: () => invoke<Record<string, unknown>>("get_settings"),
   setSetting: (key: string, value: unknown) =>
     invoke<void>("set_setting", { key, value }),
+
+  listDatSources: () => invoke<DatSource[]>("list_dat_sources"),
+  importDat: (
+    path: string,
+    emulatorProfileId: string,
+    displayName?: string
+  ) =>
+    invoke<DatSource>("import_dat", {
+      path,
+      emulatorProfileId,
+      displayName,
+    }),
+  deactivateDat: (id: number) => invoke<void>("deactivate_dat", { id }),
+  rematchLibrary: () => invoke<number>("rematch_library"),
+
+  listEmulatorProfiles: () =>
+    invoke<EmulatorProfile[]>("list_emulator_profiles"),
+  detectRetroarch: (executablePath?: string) =>
+    invoke<RetroArchDiscovery>("detect_retroarch", { executablePath }),
+  validateEmulatorProfile: (profileId: string) =>
+    invoke<HealthState>("validate_emulator_profile", { profileId }),
+  setEmulatorProfileEnabled: (profileId: string, enabled: boolean) =>
+    invoke<void>("set_emulator_profile_enabled", { profileId, enabled }),
+  setEmulatorProfilePriority: (profileId: string, priority: number) =>
+    invoke<void>("set_emulator_profile_priority", { profileId, priority }),
+
+  getGameDetail: (archiveId: number) =>
+    invoke<GameDetail>("get_game_detail", { archiveId }),
+  getProblemSummary: () => invoke<ProblemSummary>("get_problem_summary"),
+  chooseRoute: (archiveId: number) =>
+    invoke<RouteRow | null>("choose_route", { archiveId }),
+  setGameRouteOverride: (archiveId: number, routeId: number | null) =>
+    invoke<void>("set_game_route_override", { archiveId, routeId }),
+  setRoutePreferenceMode: (mode: RoutePreferenceMode) =>
+    invoke<void>("set_route_preference_mode", { mode }),
+  launchGame: (archiveId: number, routeId?: number) =>
+    invoke<LaunchResult>("launch_game", { archiveId, routeId }),
 };

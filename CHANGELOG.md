@@ -5,6 +5,29 @@ All notable changes to this project are recorded here. This project follows
 
 ## [Unreleased]
 
+## [0.2.0] — 2026-08-10
+
+RetroArch multi-core routing: DAT import through launch.
+
+### Added
+
+- Phase 2 — DAT import: XML parser (Logiqx / MAME-style), fingerprinting, DAT
+  Manager UI, and `machines` / `machine_roms` / `machine_disks` tables.
+- Phase 3 — CRC/size matching with confidence levels and compatibility states;
+  rematch on DAT import.
+- Phase 4 — Parent / BIOS / CHD dependency resolution and Problem Center.
+- Phase 5 — RetroArch discovery, arcade core scan, profile health checks, DAT
+  association, and Emulator Manager UI.
+- Phase 6 — Launchable route ranking, preference modes, and per-game overrides.
+- Phase 7 — Safe RetroArch `-L <core> <rom>` launch (argument array) with play
+  history logging.
+- Library setup banner when archives are indexed but no DAT is active; clearer
+  DAT empty-state guidance and Problem Center counting for profiles missing DATs.
+
+### Changed
+
+- App phase string advances to Phase 7 — Emulator Routing.
+
 ## [0.1.0] — 2026-08-09
 
 Initial release. Phase 0 repository foundation and Phase 1 ROM inventory.
@@ -33,5 +56,6 @@ Initial release. Phase 0 repository foundation and Phase 1 ROM inventory.
 - Dynamic SQL is limited to placeholder counts and filter shape; every value is
   bound.
 
-[Unreleased]: https://github.com/AeonSmash/arcade-rom-router/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/AeonSmash/arcade-rom-router/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/AeonSmash/arcade-rom-router/releases/tag/v0.2.0
 [0.1.0]: https://github.com/AeonSmash/arcade-rom-router/releases/tag/v0.1.0

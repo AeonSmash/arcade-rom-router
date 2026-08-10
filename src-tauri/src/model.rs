@@ -178,6 +178,238 @@ pub struct ArchivePage {
     pub summary: LibrarySummary,
 }
 
+string_enum! {
+    HealthState {
+        Unknown => "UNKNOWN",
+        Healthy => "HEALTHY",
+        NeedsDat => "NEEDS_DAT",
+        MissingCore => "MISSING_CORE",
+        MissingExecutable => "MISSING_EXECUTABLE",
+        Unhealthy => "UNHEALTHY",
+    }
+}
+
+string_enum! {
+    MatchConfidence {
+        Verified => "VERIFIED",
+        Strong => "STRONG",
+        Partial => "PARTIAL",
+        Unknown => "UNKNOWN",
+    }
+}
+
+string_enum! {
+    /// Compatibility / readiness states (SPEC.md §14), produced by matching.
+    CompatibilityState {
+        VerifiedPlayable => "VERIFIED_PLAYABLE",
+        VerifiedPlayableWithDependencies => "VERIFIED_PLAYABLE_WITH_DEPENDENCIES",
+        MultipleValidRoutes => "MULTIPLE_VALID_ROUTES",
+        MissingParent => "MISSING_PARENT",
+        MissingBios => "MISSING_BIOS",
+        MissingDevice => "MISSING_DEVICE",
+        MissingChd => "MISSING_CHD",
+        MissingSamplesOptional => "MISSING_SAMPLES_OPTIONAL",
+        IncompleteSet => "INCOMPLETE_SET",
+        WrongRomRevision => "WRONG_ROM_REVISION",
+        KnownSetNameUnverifiedContent => "KNOWN_SET_NAME_UNVERIFIED_CONTENT",
+        RecognizedRomContentAmbiguousSet => "RECOGNIZED_ROM_CONTENT_AMBIGUOUS_SET",
+        ArchiveUnreadable => "ARCHIVE_UNREADABLE",
+        Unidentified => "UNIDENTIFIED",
+        EmulatorNotInstalled => "EMULATOR_NOT_INSTALLED",
+        CoreNotInstalled => "CORE_NOT_INSTALLED",
+        DatNotInstalled => "DAT_NOT_INSTALLED",
+        RouteUnavailable => "ROUTE_UNAVAILABLE",
+        UserDisabled => "USER_DISABLED",
+        PlayableWithAudioSampleWarning => "PLAYABLE_WITH_AUDIO_SAMPLE_WARNING",
+    }
+}
+
+string_enum! {
+    RoutePreferenceMode {
+        Balanced => "BALANCED",
+        MaximumLegacy => "MAXIMUM_LEGACY",
+        Preservation => "PRESERVATION",
+        Performance => "PERFORMANCE",
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EmulatorProfile {
+    pub id: String,
+    pub display_name: String,
+    pub runner_type: String,
+    pub executable_path: Option<String>,
+    pub core_path: Option<String>,
+    pub core_signature: Option<String>,
+    pub enabled: bool,
+    pub priority: i64,
+    pub settings_json: String,
+    pub last_health_check: Option<String>,
+    pub health_state: HealthState,
+    pub games_matched: i64,
+    pub has_active_dat: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DatSource {
+    pub id: i64,
+    pub emulator_profile_id: String,
+    pub display_name: String,
+    pub source_type: String,
+    pub version: Option<String>,
+    pub path: String,
+    pub sha256: String,
+    pub machine_count: i64,
+    pub rom_entry_count: i64,
+    pub disk_entry_count: i64,
+    pub imported_at: String,
+    pub active: bool,
+    pub parser_version: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MachineSummary {
+    pub id: i64,
+    pub dat_source_id: i64,
+    pub set_name: String,
+    pub description: Option<String>,
+    pub year: Option<String>,
+    pub manufacturer: Option<String>,
+    pub clone_of: Option<String>,
+    pub rom_of: Option<String>,
+    pub is_bios: bool,
+    pub runnable: Option<bool>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MachineRomRow {
+    pub name: String,
+    pub size_bytes: Option<i64>,
+    pub crc32: Option<String>,
+    pub sha1: Option<String>,
+    pub status: Option<String>,
+    pub optional: bool,
+    pub merge_name: Option<String>,
+    pub bios_name: Option<String>,
+    pub region: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MachineDiskRow {
+    pub name: String,
+    pub sha1: Option<String>,
+    pub status: Option<String>,
+    pub optional: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MatchResultRow {
+    pub id: i64,
+    pub archive_id: i64,
+    pub machine_id: i64,
+    pub emulator_profile_id: String,
+    pub dat_source_id: i64,
+    pub state: CompatibilityState,
+    pub confidence: MatchConfidence,
+    pub matched_required: i64,
+    pub missing_required: i64,
+    pub wrong_required: i64,
+    pub score: f64,
+    pub evidence_json: String,
+    pub created_at: String,
+    pub machine: Option<MachineSummary>,
+    pub profile_display_name: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RouteRow {
+    pub id: i64,
+    pub archive_id: i64,
+    pub machine_id: i64,
+    pub emulator_profile_id: String,
+    pub match_result_id: i64,
+    pub is_selected: bool,
+    pub selection_reason: Option<String>,
+    pub user_override: bool,
+    pub launchable: bool,
+    pub profile_display_name: Option<String>,
+    pub machine_set_name: Option<String>,
+    pub state: Option<CompatibilityState>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GameDetail {
+    pub archive: ArchiveRow,
+    pub can_run: String,
+    pub can_run_reason: String,
+    pub selected_route: Option<RouteRow>,
+    pub routes: Vec<RouteRow>,
+    pub matches: Vec<MatchResultRow>,
+    pub members: Vec<ArchiveMemberRow>,
+    pub dependencies: Vec<DependencyStatus>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DependencyStatus {
+    pub kind: String,
+    pub name: String,
+    pub present: bool,
+    pub detail: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProblemSummary {
+    pub missing_parent: i64,
+    pub missing_bios: i64,
+    pub missing_device: i64,
+    pub missing_chd: i64,
+    pub incomplete_set: i64,
+    pub unidentified: i64,
+    pub unreadable: i64,
+    pub core_not_installed: i64,
+    pub dat_not_installed: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RetroArchDiscovery {
+    pub executable_path: Option<String>,
+    pub cores_dir: Option<String>,
+    pub system_dir: Option<String>,
+    pub config_path: Option<String>,
+    pub detected_cores: Vec<DetectedCore>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DetectedCore {
+    pub profile_id: String,
+    pub display_name: String,
+    pub core_path: String,
+    pub matched_filename: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LaunchResult {
+    pub play_history_id: i64,
+    pub pid: u32,
+    pub started_at: String,
+    pub core_path: String,
+    pub content_path: String,
+    pub log_path: Option<String>,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

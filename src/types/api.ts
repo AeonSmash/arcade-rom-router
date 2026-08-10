@@ -1,8 +1,5 @@
 /**
  * Types mirroring the Rust domain model at the Tauri boundary.
- *
- * The string unions match the stable serialized values in
- * `src-tauri/src/model.rs`; keep the two in step.
  */
 
 export type ArchiveState =
@@ -26,6 +23,24 @@ export type ScanPhase =
 
 export type ScanMode = "QUICK" | "FULL" | "DEEP_VERIFY";
 
+export type HealthState =
+  | "UNKNOWN"
+  | "HEALTHY"
+  | "NEEDS_DAT"
+  | "MISSING_CORE"
+  | "MISSING_EXECUTABLE"
+  | "UNHEALTHY";
+
+export type MatchConfidence = "VERIFIED" | "STRONG" | "PARTIAL" | "UNKNOWN";
+
+export type CompatibilityState = string;
+
+export type RoutePreferenceMode =
+  | "BALANCED"
+  | "MAXIMUM_LEGACY"
+  | "PRESERVATION"
+  | "PERFORMANCE";
+
 export type ErrorCategory =
   | "user-actionable"
   | "configuration"
@@ -35,7 +50,6 @@ export type ErrorCategory =
   | "database"
   | "internal";
 
-/** Shape of every rejected command, from `AppError` in the backend. */
 export interface AppErrorPayload {
   category: ErrorCategory;
   title: string;
@@ -126,6 +140,138 @@ export interface DiagnosticEntry {
   level: string;
   target: string;
   message: string;
+}
+
+export interface EmulatorProfile {
+  id: string;
+  displayName: string;
+  runnerType: string;
+  executablePath: string | null;
+  corePath: string | null;
+  coreSignature: string | null;
+  enabled: boolean;
+  priority: number;
+  settingsJson: string;
+  lastHealthCheck: string | null;
+  healthState: HealthState;
+  gamesMatched: number;
+  hasActiveDat: boolean;
+}
+
+export interface DatSource {
+  id: number;
+  emulatorProfileId: string;
+  displayName: string;
+  sourceType: string;
+  version: string | null;
+  path: string;
+  sha256: string;
+  machineCount: number;
+  romEntryCount: number;
+  diskEntryCount: number;
+  importedAt: string;
+  active: boolean;
+  parserVersion: number;
+}
+
+export interface DetectedCore {
+  profileId: string;
+  displayName: string;
+  corePath: string;
+  matchedFilename: string;
+}
+
+export interface RetroArchDiscovery {
+  executablePath: string | null;
+  coresDir: string | null;
+  systemDir: string | null;
+  configPath: string | null;
+  detectedCores: DetectedCore[];
+}
+
+export interface MachineSummary {
+  id: number;
+  datSourceId: number;
+  setName: string;
+  description: string | null;
+  year: string | null;
+  manufacturer: string | null;
+  cloneOf: string | null;
+  romOf: string | null;
+  isBios: boolean;
+  runnable: boolean | null;
+}
+
+export interface MatchResultRow {
+  id: number;
+  archiveId: number;
+  machineId: number;
+  emulatorProfileId: string;
+  datSourceId: number;
+  state: CompatibilityState;
+  confidence: MatchConfidence;
+  matchedRequired: number;
+  missingRequired: number;
+  wrongRequired: number;
+  score: number;
+  evidenceJson: string;
+  createdAt: string;
+  machine: MachineSummary | null;
+  profileDisplayName: string | null;
+}
+
+export interface RouteRow {
+  id: number;
+  archiveId: number;
+  machineId: number;
+  emulatorProfileId: string;
+  matchResultId: number;
+  isSelected: boolean;
+  selectionReason: string | null;
+  userOverride: boolean;
+  launchable: boolean;
+  profileDisplayName: string | null;
+  machineSetName: string | null;
+  state: CompatibilityState | null;
+}
+
+export interface DependencyStatus {
+  kind: string;
+  name: string;
+  present: boolean;
+  detail: string;
+}
+
+export interface GameDetail {
+  archive: ArchiveRow;
+  canRun: string;
+  canRunReason: string;
+  selectedRoute: RouteRow | null;
+  routes: RouteRow[];
+  matches: MatchResultRow[];
+  members: ArchiveMemberRow[];
+  dependencies: DependencyStatus[];
+}
+
+export interface ProblemSummary {
+  missingParent: number;
+  missingBios: number;
+  missingDevice: number;
+  missingChd: number;
+  incompleteSet: number;
+  unidentified: number;
+  unreadable: number;
+  coreNotInstalled: number;
+  datNotInstalled: number;
+}
+
+export interface LaunchResult {
+  playHistoryId: number;
+  pid: number;
+  startedAt: string;
+  corePath: string;
+  contentPath: string;
+  logPath: string | null;
 }
 
 export const TERMINAL_JOB_STATES: readonly JobState[] = [

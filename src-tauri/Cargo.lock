@@ -55,10 +55,11 @@ checksum = "330a5ed07fa54e4702c9d6c4174f74427fc0ef6e214bbd677ae50a5099946470"
 
 [[package]]
 name = "arcade-rom-router"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "chrono",
  "crc32fast",
+ "quick-xml",
  "serde",
  "serde_json",
  "sha2 0.11.0",
@@ -2948,6 +2949,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e660451e55124f798a69a5af3f49ccfbefbd41910eefd25caf2393e1f3473ec1"
 dependencies = [
  "memchr",
+ "serde",
 ]
 
 [[package]]

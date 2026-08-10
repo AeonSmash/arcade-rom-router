@@ -1,15 +1,19 @@
 //! Arcade ROM Router backend.
 //!
-//! Phase 0/1 scope: repository foundation plus a trustworthy, read-only ROM
-//! inventory engine. DAT import, compatibility matching, emulator routing, and
-//! launching are later phases and are deliberately absent.
+//! Phases 0–7: inventory, DAT import, matching, dependencies, emulator
+//! profiles, routing, and RetroArch launch.
 
 pub mod archive;
 pub mod commands;
+pub mod dat;
 pub mod db;
+pub mod emulator;
 pub mod error;
+pub mod launch;
 pub mod logging;
+pub mod matcher;
 pub mod model;
+pub mod routing;
 pub mod scanner;
 pub mod state;
 
@@ -47,7 +51,6 @@ pub fn run() {
                     std::io::Error::other(error.to_string())
                 })?;
 
-            // A job left running by a previous crash has no process behind it.
             match tauri::async_runtime::block_on(db::scan_jobs::reconcile_orphans(&pool)) {
                 Ok(0) => {}
                 Ok(count) => warn!(count, "marked interrupted scan jobs as failed"),
@@ -62,7 +65,6 @@ pub fn run() {
                 log_dir,
             });
 
-            // Held for the process lifetime so buffered log lines reach disk.
             app.manage(logging);
 
             Ok(())
@@ -85,6 +87,21 @@ pub fn run() {
             commands::library::get_library_summary,
             commands::settings::get_settings,
             commands::settings::set_setting,
+            commands::dats::list_dat_sources,
+            commands::dats::import_dat,
+            commands::dats::deactivate_dat,
+            commands::dats::rematch_library,
+            commands::emulators::list_emulator_profiles,
+            commands::emulators::detect_retroarch,
+            commands::emulators::validate_emulator_profile,
+            commands::emulators::set_emulator_profile_enabled,
+            commands::emulators::set_emulator_profile_priority,
+            commands::games::get_game_detail,
+            commands::games::get_problem_summary,
+            commands::games::choose_route,
+            commands::games::set_game_route_override,
+            commands::games::set_route_preference_mode,
+            commands::games::launch_game,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Arcade ROM Router");
