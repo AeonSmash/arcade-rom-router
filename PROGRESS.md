@@ -6,6 +6,7 @@ Phase 7 — RetroArch Launch (complete for the RetroArch multi-core track).
 
 ## Release
 
+**v0.2.1** — RetroArch discovery hardening and FinalBurn Neo core binding fix.
 **v0.2.0** — DAT import through RetroArch launch (Phases 2–7).
 
 ## Completed

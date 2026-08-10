@@ -51,6 +51,15 @@ export function EmulatorManager({ onError, onOpenDats }: Props) {
       const result = await api.detectRetroarch(path);
       setDiscovery(result);
       await reload();
+      if (!result.executablePath) {
+        onError({
+          category: "configuration",
+          title: "RetroArch not found",
+          message:
+            "Could not find retroarch.exe in the usual folders. Click Browse… and select it (portable builds are often in C:\\RetroArch-Win64).",
+          technicalDetails: null,
+        });
+      }
     } catch (error) {
       onError(error);
     } finally {

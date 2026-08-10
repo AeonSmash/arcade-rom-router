@@ -31,6 +31,8 @@ const CORE_MAP: &[(&str, &str, &str)] = &[
 
 fn common_retroarch_candidates() -> Vec<PathBuf> {
     let mut out = Vec::new();
+
+    // Official / installer layouts
     if let Ok(pf) = std::env::var("ProgramFiles") {
         out.push(PathBuf::from(pf).join("RetroArch").join("retroarch.exe"));
     }
@@ -38,8 +40,32 @@ fn common_retroarch_candidates() -> Vec<PathBuf> {
         out.push(PathBuf::from(pf86).join("RetroArch").join("retroarch.exe"));
     }
     if let Ok(local) = std::env::var("LOCALAPPDATA") {
-        out.push(PathBuf::from(local).join("RetroArch").join("retroarch.exe"));
+        let local = PathBuf::from(local);
+        out.push(local.join("RetroArch").join("retroarch.exe"));
+        out.push(
+            local
+                .join("Programs")
+                .join("RetroArch")
+                .join("retroarch.exe"),
+        );
     }
+
+    // Common portable / zip extracts (Windows nightly builds often use RetroArch-Win64)
+    for root in [
+        r"C:\RetroArch-Win64",
+        r"C:\RetroArch",
+        r"D:\RetroArch-Win64",
+        r"D:\RetroArch",
+        r"E:\RetroArch-Win64",
+        r"E:\RetroArch",
+        r"F:\RetroArch-Win64",
+        r"F:\RetroArch",
+        r"F:\Arcade Emulation\RetroArch",
+        r"F:\Arcade Emulation\RetroArch-Win64",
+    ] {
+        out.push(PathBuf::from(root).join("retroarch.exe"));
+    }
+
     out
 }
 
@@ -72,11 +98,48 @@ pub fn match_core_filename(file_name: &str) -> Option<(&'static str, &'static st
         return None;
     }
     for (needle, profile_id, display) in CORE_MAP {
+        // Bare "mame" must not match hbmame / mame2000 / etc. Prefer the
+        // current libretro core filename shape: mame_libretro.*
+        if *needle == "mame" {
+            if lower.starts_with("mame_libretro.") || lower == "mame_libretro.dll" {
+                return Some((*profile_id, *display));
+            }
+            continue;
+        }
+        // FB Alpha split cores (cps1/cps2/neogeo/…) are not the full FBNeo
+        // arcade core. Only map the generic FB Alpha DLL, and prefer FBNeo.
+        if *needle == "fbalpha" {
+            if lower.starts_with("fbalpha_libretro.")
+                || lower.starts_with("fbalpha2012_libretro.")
+            {
+                return Some((*profile_id, *display));
+            }
+            continue;
+        }
+        // Midway-only 2003 fork is not the main MAME 2003 core.
+        if *needle == "mame2003" && lower.contains("mame2003_midway") {
+            continue;
+        }
         if lower.contains(needle) {
             return Some((*profile_id, *display));
         }
     }
     None
+}
+
+/// Higher is better when several DLLs map to the same profile.
+fn core_preference(file_name: &str) -> i32 {
+    let lower = file_name.to_ascii_lowercase();
+    if lower.contains("fbneo") {
+        return 100;
+    }
+    if lower.starts_with("fbalpha_libretro.") || lower.starts_with("fbalpha2012_libretro.") {
+        return 40;
+    }
+    if lower.contains("mame2003_plus") || lower.contains("mame2003plus") {
+        return 100;
+    }
+    50
 }
 
 pub fn scan_cores_dir(cores_dir: &Path) -> Vec<DetectedCore> {
@@ -85,8 +148,8 @@ pub fn scan_cores_dir(cores_dir: &Path) -> Vec<DetectedCore> {
         return found;
     };
 
-    // Prefer first (most specific) match per profile.
-    let mut claimed = std::collections::HashSet::new();
+    // Best match per profile (FBNeo must win over FB Alpha CPS split cores).
+    let mut best: std::collections::HashMap<&str, DetectedCore> = std::collections::HashMap::new();
 
     let mut files: Vec<_> = entries
         .filter_map(|e| e.ok())
@@ -102,17 +165,23 @@ pub fn scan_cores_dir(cores_dir: &Path) -> Vec<DetectedCore> {
         let Some((profile_id, display)) = match_core_filename(name) else {
             continue;
         };
-        if !claimed.insert(profile_id) {
-            continue;
-        }
-        found.push(DetectedCore {
+        let pref = core_preference(name);
+        let candidate = DetectedCore {
             profile_id: profile_id.into(),
             display_name: display.into(),
             core_path: path.display().to_string(),
             matched_filename: name.into(),
-        });
+        };
+        match best.get(profile_id) {
+            Some(existing) if core_preference(&existing.matched_filename) >= pref => {}
+            _ => {
+                best.insert(profile_id, candidate);
+            }
+        }
     }
 
+    found.extend(best.into_values());
+    found.sort_by(|a, b| a.profile_id.cmp(&b.profile_id));
     found
 }
 
@@ -286,6 +355,45 @@ mod tests {
             "mame_current"
         );
         assert_eq!(match_core_filename("fbneo_libretro.dll").unwrap().0, "fbneo");
+        assert_eq!(
+            match_core_filename("fbalpha2012_libretro.dll").unwrap().0,
+            "fbneo"
+        );
+        assert!(match_core_filename("fbalpha2012_cps1_libretro.dll").is_none());
+        assert!(match_core_filename("fbalpha2012_neogeo_libretro.dll").is_none());
+        assert!(match_core_filename("mame2003_midway_libretro.dll").is_none());
         assert!(match_core_filename("snes9x_libretro.dll").is_none());
+        assert!(match_core_filename("hbmame_libretro.dll").is_none());
+        assert!(match_core_filename("mame2000_libretro.dll").is_none());
+    }
+
+    #[test]
+    fn scan_prefers_fbneo_over_fbalpha_split_cores() {
+        let dir = tempfile_cores(&[
+            "fbalpha2012_cps1_libretro.dll",
+            "fbalpha2012_libretro.dll",
+            "fbneo_libretro.dll",
+        ]);
+        let found = scan_cores_dir(&dir);
+        let fbneo = found.iter().find(|c| c.profile_id == "fbneo").unwrap();
+        assert!(
+            fbneo.matched_filename.contains("fbneo"),
+            "expected fbneo DLL, got {}",
+            fbneo.matched_filename
+        );
+    }
+
+    fn tempfile_cores(names: &[&str]) -> PathBuf {
+        let dir = std::env::temp_dir().join(format!(
+            "arr-cores-{}-{}",
+            std::process::id(),
+            names.len()
+        ));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        for name in names {
+            std::fs::write(dir.join(name), b"x").unwrap();
+        }
+        dir
     }
 }

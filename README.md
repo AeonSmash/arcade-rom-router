@@ -44,10 +44,20 @@ What works today:
 
 ## Getting started
 
-```bash
+On Windows **Command Prompt**, change drive and folder in one step (`cd` alone does
+not leave `C:`):
+
+```bat
+cd /d "F:\Arcade Emulation\arcade-rom-router"
 npm install
 npm run tauri dev
 ```
+
+In PowerShell, `cd` to that path is enough. Confirm the prompt shows the project
+folder (and that `package.json` is there) before running npm.
+
+Use the Arcade ROM Router **desktop window**. Opening the Vite URL in a browser
+will not work — there is no Tauri bridge there.
 
 ## Building a release
 

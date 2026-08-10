@@ -5,6 +5,23 @@ All notable changes to this project are recorded here. This project follows
 
 ## [Unreleased]
 
+## [0.2.1] — 2026-08-10
+
+### Fixed
+
+- FinalBurn Neo no longer binds to FB Alpha CPS/NeoGeo split cores
+  (`fbalpha2012_cps1_…`); discovery prefers `fbneo_libretro` when present.
+- MAME 2003 discovery ignores the Midway-only fork so it cannot steal the main
+  2003 profile.
+- Emulator Manager reports a clear configuration error when RetroArch is not
+  found, instead of silently leaving profiles unconfigured.
+
+### Changed
+
+- RetroArch auto-detect also checks portable layouts such as
+  `C:\RetroArch-Win64` and related drive roots.
+- README documents Windows `cd /d` so npm commands run from the project folder.
+
 ## [0.2.0] — 2026-08-10
 
 RetroArch multi-core routing: DAT import through launch.
@@ -56,6 +73,7 @@ Initial release. Phase 0 repository foundation and Phase 1 ROM inventory.
 - Dynamic SQL is limited to placeholder counts and filter shape; every value is
   bound.
 
-[Unreleased]: https://github.com/AeonSmash/arcade-rom-router/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/AeonSmash/arcade-rom-router/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/AeonSmash/arcade-rom-router/releases/tag/v0.2.1
 [0.2.0]: https://github.com/AeonSmash/arcade-rom-router/releases/tag/v0.2.0
 [0.1.0]: https://github.com/AeonSmash/arcade-rom-router/releases/tag/v0.1.0

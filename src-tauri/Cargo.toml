@@ -1,6 +1,6 @@
 [package]
 name = "arcade-rom-router"
-version = "0.2.0"
+version = "0.2.1"
 description = "Evidence-based arcade ROM identification and automatic emulator routing."
 authors = ["Arcade ROM Router contributors"]
 edition = "2021"
