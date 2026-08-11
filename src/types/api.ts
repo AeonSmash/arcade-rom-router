@@ -73,7 +73,11 @@ export type ArchiveSort =
   | "NAME_ASC"
   | "NAME_DESC"
   | "SIZE_ASC"
-  | "SIZE_DESC";
+  | "SIZE_DESC"
+  | "YEAR_ASC"
+  | "YEAR_DESC"
+  | "GENRE_ASC"
+  | "GENRE_DESC";
 
 export interface ArchiveRow {
   id: number;
@@ -98,6 +102,8 @@ export interface ArchiveRow {
   setName: string | null;
   /** CatVer category / genre when imported. */
   genre: string | null;
+  /** DAT release year when matched. */
+  year: string | null;
 }
 
 export interface CategoryStats {

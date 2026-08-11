@@ -82,6 +82,9 @@ export const api = {
     search?: string;
     favoritesOnly?: boolean;
     canRunOnly?: boolean;
+    genre?: string;
+    yearMin?: number;
+    yearMax?: number;
     sort?: ArchiveSort;
     limit?: number;
     offset?: number;
@@ -112,6 +115,7 @@ export const api = {
   importCatver: (path: string) =>
     invoke<CategoryStats>("import_catver", { path }),
   getCategoryStats: () => invoke<CategoryStats>("get_category_stats"),
+  listGenres: () => invoke<string[]>("list_genres"),
 
   listEmulatorProfiles: () =>
     invoke<EmulatorProfile[]>("list_emulator_profiles"),

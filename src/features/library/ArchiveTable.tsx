@@ -57,6 +57,7 @@ export function ArchiveTable({ rows, loading, selectedId, onSelect }: Props) {
       <div className="archive-table-head" role="presentation">
         <span>Name</span>
         <span>Genre</span>
+        <span className="numeric">Year</span>
         <span className="numeric">Members</span>
         <span>CRC indexed</span>
         <span className="numeric">Size</span>
@@ -116,6 +117,7 @@ export function ArchiveTable({ rows, loading, selectedId, onSelect }: Props) {
                 <span className="archive-genre" title={row.genre ?? undefined}>
                   {row.genre ?? "—"}
                 </span>
+                <span className="numeric archive-year">{row.year ?? "—"}</span>
                 <span className="numeric">
                   {row.archiveState === "DISK_IMAGE_INDEXED"
                     ? "—"

@@ -56,36 +56,41 @@
 
 .app-brand {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: var(--space-3);
   min-width: 0;
 }
 
-.app-title {
-  font-size: var(--text-md);
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  color: var(--accent);
-  white-space: nowrap;
+.app-logo {
+  display: block;
+  height: 72px;
+  width: auto;
+  object-fit: contain;
+  flex-shrink: 0;
 }
 
 .app-phase {
   font-size: var(--text-xs);
   color: var(--text-tertiary);
   white-space: nowrap;
+  align-self: flex-end;
+  padding-bottom: 6px;
 }
 
 .app-header-controls {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
+  justify-content: flex-end;
   gap: var(--space-2);
 }
 
 .app-header-controls input[type="search"] {
-  width: 260px;
+  width: 220px;
 }
 
-.library-sort select {
+.library-sort select,
+.library-filter select {
   min-width: 120px;
   height: 34px;
   padding: 0 var(--space-2);
@@ -94,6 +99,40 @@
   background: var(--bg-0);
   color: var(--text-primary);
   font-size: var(--text-sm);
+}
+
+.library-filter select {
+  min-width: 140px;
+  max-width: 180px;
+}
+
+.library-year-range {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.library-year-range span {
+  color: var(--text-tertiary);
+  font-size: var(--text-sm);
+}
+
+.library-year-range input[type="number"] {
+  width: 72px;
+  height: 34px;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-0);
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  appearance: textfield;
+}
+
+.library-year-range input[type="number"]::-webkit-outer-spin-button,
+.library-year-range input[type="number"]::-webkit-inner-spin-button {
+  appearance: none;
+  margin: 0;
 }
 
 .app-body {

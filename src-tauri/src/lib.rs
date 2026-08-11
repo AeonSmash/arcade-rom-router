@@ -96,6 +96,7 @@ pub fn run() {
             commands::dats::rematch_library,
             commands::dats::import_catver,
             commands::dats::get_category_stats,
+            commands::dats::list_genres,
             commands::emulators::list_emulator_profiles,
             commands::emulators::detect_retroarch,
             commands::emulators::validate_emulator_profile,

@@ -236,6 +236,10 @@ pub struct ArchiveQuery {
     pub favorites_only: bool,
     /// Launchable archives only (Readable tab).
     pub can_run_only: bool,
+    /// Top-level CatVer genre (exact or `Genre / …` prefix).
+    pub genre: Option<String>,
+    pub year_min: Option<i64>,
+    pub year_max: Option<i64>,
     pub sort: crate::model::ArchiveSort,
     pub limit: i64,
     pub offset: i64,
@@ -249,6 +253,9 @@ impl Default for ArchiveQuery {
             search: None,
             favorites_only: false,
             can_run_only: false,
+            genre: None,
+            year_min: None,
+            year_max: None,
             sort: crate::model::ArchiveSort::NameAsc,
             limit: 200,
             offset: 0,
@@ -302,6 +309,11 @@ fn map_archive_row(row: &sqlx::sqlite::SqliteRow) -> ArchiveRow {
         .ok()
         .flatten()
         .filter(|s| !s.trim().is_empty());
+    let year: Option<String> = row
+        .try_get::<Option<String>, _>("year")
+        .ok()
+        .flatten()
+        .filter(|s| !s.trim().is_empty());
     ArchiveRow {
         id: row.get("id"),
         rom_root_id: row.get("rom_root_id"),
@@ -324,6 +336,7 @@ fn map_archive_row(row: &sqlx::sqlite::SqliteRow) -> ArchiveRow {
         display_name,
         set_name,
         genre,
+        year,
     }
 }
 
@@ -337,6 +350,7 @@ fn bind_filter_values<'q>(
     mut q: SqliteQuery<'q>,
     query: &ArchiveQuery,
     search_term: Option<String>,
+    genre_term: Option<String>,
     bind_state: bool,
     search_binds: usize,
 ) -> SqliteQuery<'q> {
@@ -353,6 +367,20 @@ fn bind_filter_values<'q>(
             q = q.bind(term.clone());
         }
     }
+    if let Some(genre) = genre_term {
+        // Exact top-level match + hierarchical CatVer children (`Genre / …`).
+        let escaped = genre
+            .replace('\\', "\\\\")
+            .replace('%', "\\%")
+            .replace('_', "\\_");
+        q = q.bind(genre.clone()).bind(format!("{escaped} / %"));
+    }
+    if let Some(year_min) = query.year_min {
+        q = q.bind(year_min);
+    }
+    if let Some(year_max) = query.year_max {
+        q = q.bind(year_max);
+    }
     q
 }
 
@@ -363,8 +391,26 @@ fn order_by_sql(sort: crate::model::ArchiveSort) -> &'static str {
         ArchiveSort::NameDesc => "display_title COLLATE NOCASE DESC, a.id",
         ArchiveSort::SizeAsc => "a.size_bytes ASC, display_title COLLATE NOCASE ASC, a.id",
         ArchiveSort::SizeDesc => "a.size_bytes DESC, display_title COLLATE NOCASE ASC, a.id",
+        // Unknown years sort after known ones in both directions.
+        ArchiveSort::YearAsc => {
+            "CASE WHEN year_sort IS NULL THEN 1 ELSE 0 END, year_sort ASC, display_title COLLATE NOCASE ASC, a.id"
+        }
+        ArchiveSort::YearDesc => {
+            "CASE WHEN year_sort IS NULL THEN 1 ELSE 0 END, year_sort DESC, display_title COLLATE NOCASE ASC, a.id"
+        }
+        ArchiveSort::GenreAsc => {
+            "IFNULL(genre, '') COLLATE NOCASE ASC, display_title COLLATE NOCASE ASC, a.id"
+        }
+        ArchiveSort::GenreDesc => {
+            "IFNULL(genre, '') COLLATE NOCASE DESC, display_title COLLATE NOCASE ASC, a.id"
+        }
     }
 }
+
+/// Numeric year for range filters / sorting. Non-numeric DAT years become NULL.
+const YEAR_SORT_SQL: &str = "CAST(NULLIF(TRIM(m.year), '') AS INTEGER)";
+const YEAR_MIN_SQL: &str = "CAST(NULLIF(TRIM(m.year), '') AS INTEGER) >= ?";
+const YEAR_MAX_SQL: &str = "CAST(NULLIF(TRIM(m.year), '') AS INTEGER) <= ?";
 
 pub async fn page(pool: &SqlitePool, query: &ArchiveQuery) -> AppResult<ArchivePage> {
     let mut conditions: Vec<&str> = Vec::new();
@@ -404,6 +450,21 @@ pub async fn page(pool: &SqlitePool, query: &ArchiveQuery) -> AppResult<ArchiveP
     } else {
         0
     };
+    let genre_term = query
+        .genre
+        .as_ref()
+        .map(|s| s.trim())
+        .filter(|s| !s.is_empty())
+        .map(|s| s.to_string());
+    if genre_term.is_some() {
+        conditions.push("(sc.category = ? OR sc.category LIKE ? ESCAPE '\\')");
+    }
+    if query.year_min.is_some() {
+        conditions.push(YEAR_MIN_SQL);
+    }
+    if query.year_max.is_some() {
+        conditions.push(YEAR_MAX_SQL);
+    }
 
     let where_clause = if conditions.is_empty() {
         String::new()
@@ -412,8 +473,16 @@ pub async fn page(pool: &SqlitePool, query: &ArchiveQuery) -> AppResult<ArchiveP
     };
 
     let order_by = order_by_sql(query.sort);
-    let bind_filters =
-        |q| bind_filter_values(q, query, search_term.clone(), bind_state, search_binds);
+    let bind_filters = |q| {
+        bind_filter_values(
+            q,
+            query,
+            search_term.clone(),
+            genre_term.clone(),
+            bind_state,
+            search_binds,
+        )
+    };
 
     // Audited: `where_clause` / `order_by` are assembled from fixed fragments.
     let from_sql = format!(
@@ -446,6 +515,8 @@ pub async fn page(pool: &SqlitePool, query: &ArchiveQuery) -> AppResult<ArchiveP
                 NULLIF(TRIM(m.description), '') AS display_name,
                 NULLIF(TRIM(m.set_name), '') AS set_name,
                 NULLIF(TRIM(sc.category), '') AS genre,
+                NULLIF(TRIM(m.year), '') AS year,
+                {YEAR_SORT_SQL} AS year_sort,
                 {TITLE_SQL} AS display_title
          {from_sql}
          ORDER BY {order_by}
@@ -513,7 +584,8 @@ pub async fn get(pool: &SqlitePool, id: i64) -> AppResult<Option<ArchiveRow>> {
                 ) THEN 1 ELSE 0 END AS can_run,
                 NULLIF(TRIM(m.description), '') AS display_name,
                 NULLIF(TRIM(m.set_name), '') AS set_name,
-                NULLIF(TRIM(sc.category), '') AS genre
+                NULLIF(TRIM(sc.category), '') AS genre,
+                NULLIF(TRIM(m.year), '') AS year
          FROM archives a
          LEFT JOIN favorites f ON f.archive_id = a.id
          LEFT JOIN routes sel ON sel.archive_id = a.id AND sel.is_selected = 1
@@ -724,12 +796,121 @@ mod tests {
         .await
         .unwrap();
 
-        let page = page(&pool, &ArchiveQuery::default()).await.unwrap();
-        assert_eq!(page.rows.len(), 1);
+        let listed = page(&pool, &ArchiveQuery::default()).await.unwrap();
+        assert_eq!(listed.rows.len(), 1);
         assert_eq!(
-            page.rows[0].genre.as_deref(),
+            listed.rows[0].genre.as_deref(),
             Some("Shooter / Flying Vertical")
         );
+
+        let filtered = page(
+            &pool,
+            &ArchiveQuery {
+                genre: Some("Shooter".into()),
+                ..Default::default()
+            },
+        )
+        .await
+        .unwrap();
+        assert_eq!(filtered.total_matching, 1);
+
+        let miss = page(
+            &pool,
+            &ArchiveQuery {
+                genre: Some("Maze".into()),
+                ..Default::default()
+            },
+        )
+        .await
+        .unwrap();
+        assert_eq!(miss.total_matching, 0);
+    }
+
+    #[tokio::test]
+    async fn page_filters_by_year_range() {
+        let (pool, root_id) = setup().await;
+        commit_batch(
+            &pool,
+            &[
+                sample(root_id, "old.zip", ArchiveState::Indexed, 1),
+                sample(root_id, "new.zip", ArchiveState::Indexed, 1),
+            ],
+        )
+        .await
+        .unwrap();
+
+        let all = page(&pool, &ArchiveQuery::default()).await.unwrap();
+        let old_id = all
+            .rows
+            .iter()
+            .find(|r| r.file_name == "old.zip")
+            .unwrap()
+            .id;
+        let new_id = all
+            .rows
+            .iter()
+            .find(|r| r.file_name == "new.zip")
+            .unwrap()
+            .id;
+
+        sqlx::query("PRAGMA foreign_keys = OFF")
+            .execute(&pool)
+            .await
+            .unwrap();
+        sqlx::query(
+            "INSERT INTO machines (
+                 id, dat_source_id, set_name, description, year, manufacturer,
+                 clone_of, rom_of, is_bios, runnable
+             ) VALUES
+             (1, 1, 'old', 'Old Game', '1980', 'Capcom', NULL, NULL, 0, 1),
+             (2, 1, 'new', 'New Game', '1995', 'Capcom', NULL, NULL, 0, 1)",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+        sqlx::query(
+            "INSERT INTO routes (
+                 archive_id, machine_id, emulator_profile_id, match_result_id,
+                 is_selected, selection_reason, user_override, launchable
+             ) VALUES
+             (?1, 1, 'fbneo', 1, 1, 'test', 0, 1),
+             (?2, 2, 'fbneo', 2, 1, 'test', 0, 1)",
+        )
+        .bind(old_id)
+        .bind(new_id)
+        .execute(&pool)
+        .await
+        .unwrap();
+        sqlx::query("PRAGMA foreign_keys = ON")
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        let eighties = page(
+            &pool,
+            &ArchiveQuery {
+                year_min: Some(1980),
+                year_max: Some(1989),
+                ..Default::default()
+            },
+        )
+        .await
+        .unwrap();
+        assert_eq!(eighties.total_matching, 1);
+        assert_eq!(eighties.rows[0].file_name, "old.zip");
+        assert_eq!(eighties.rows[0].year.as_deref(), Some("1980"));
+
+        let sorted = page(
+            &pool,
+            &ArchiveQuery {
+                sort: crate::model::ArchiveSort::YearDesc,
+                ..Default::default()
+            },
+        )
+        .await
+        .unwrap();
+        assert_eq!(sorted.rows[0].file_name, "new.zip");
+        assert_eq!(sorted.rows[1].file_name, "old.zip");
     }
 
     #[tokio::test]

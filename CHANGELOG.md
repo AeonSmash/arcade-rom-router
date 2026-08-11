@@ -5,6 +5,17 @@ All notable changes to this project are recorded here. This project follows
 
 ## [Unreleased]
 
+## [0.4.1] — 2026-08-11
+
+Library filters for genre and release year.
+
+### Added
+
+- Genre filter (top-level CatVer categories) and year-range From/To controls in
+  the library header.
+- Sort by year or genre (in addition to name and size).
+- Year column on library rows and in the detail pane (from DAT matches).
+
 ## [0.4.0] — 2026-08-11
 
 ROM verification, safer routing, and library UX (names, genres, gamepad nav).
@@ -137,7 +148,8 @@ Initial release. Phase 0 repository foundation and Phase 1 ROM inventory.
 - Dynamic SQL is limited to placeholder counts and filter shape; every value is
   bound.
 
-[Unreleased]: https://github.com/AeonSmash/aeonic-arcadia/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/AeonSmash/aeonic-arcadia/compare/v0.4.1...HEAD
+[0.4.1]: https://github.com/AeonSmash/aeonic-arcadia/releases/tag/v0.4.1
 [0.4.0]: https://github.com/AeonSmash/aeonic-arcadia/releases/tag/v0.4.0
 [0.3.0]: https://github.com/AeonSmash/aeonic-arcadia/releases/tag/v0.3.0
 [0.2.1]: https://github.com/AeonSmash/aeonic-arcadia/releases/tag/v0.2.1

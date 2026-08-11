@@ -54,3 +54,8 @@ pub async fn import_catver(state: State<'_, AppState>, path: String) -> AppResul
 pub async fn get_category_stats(state: State<'_, AppState>) -> AppResult<CategoryStats> {
     dat::category_stats(&state.pool).await
 }
+
+#[tauri::command]
+pub async fn list_genres(state: State<'_, AppState>) -> AppResult<Vec<String>> {
+    crate::db::categories::list_genres(&state.pool).await
+}

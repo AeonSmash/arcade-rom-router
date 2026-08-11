@@ -26,6 +26,7 @@ import type {
   ArchiveSort,
   RomRoot,
 } from "../types/api";
+import logoUrl from "../assets/aeonic-arcadia-logo.png";
 import "./App.css";
 
 type LibraryFilter =
@@ -50,9 +51,25 @@ const FILTERS: { id: LibraryFilter; label: string }[] = [
 const SORT_OPTIONS: { id: ArchiveSort; label: string }[] = [
   { id: "NAME_ASC", label: "Name A–Z" },
   { id: "NAME_DESC", label: "Name Z–A" },
+  { id: "YEAR_ASC", label: "Year ↑" },
+  { id: "YEAR_DESC", label: "Year ↓" },
+  { id: "GENRE_ASC", label: "Genre A–Z" },
+  { id: "GENRE_DESC", label: "Genre Z–A" },
   { id: "SIZE_ASC", label: "Size ↑" },
   { id: "SIZE_DESC", label: "Size ↓" },
 ];
+
+function parseYearInput(value: string): number | undefined {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return undefined;
+  }
+  const year = Number(trimmed);
+  if (!Number.isInteger(year) || year < 1970 || year > 2100) {
+    return undefined;
+  }
+  return year;
+}
 
 const SYSTEM_VIEWS: View[] = [
   "emulators",
@@ -82,7 +99,14 @@ export default function App() {
   const [categoryCount, setCategoryCount] = useState(0);
   const [libraryLayout, setLibraryLayout] = useState<LibraryLayout>("table");
   const [sort, setSort] = useState<ArchiveSort>("NAME_ASC");
+  const [genreFilter, setGenreFilter] = useState("");
+  const [yearMinInput, setYearMinInput] = useState("");
+  const [yearMaxInput, setYearMaxInput] = useState("");
+  const [genres, setGenres] = useState<string[]>([]);
   const focusIndexRef = useRef(0);
+
+  const yearMin = useMemo(() => parseYearInput(yearMinInput), [yearMinInput]);
+  const yearMax = useMemo(() => parseYearInput(yearMaxInput), [yearMaxInput]);
 
   const reportError = useCallback((raw: unknown) => {
     setError(toAppError(raw));
@@ -110,6 +134,9 @@ export default function App() {
           archiveState,
           favoritesOnly: filter === "FAVORITES",
           canRunOnly: filter === "READABLE",
+          genre: genreFilter || undefined,
+          yearMin,
+          yearMax,
           sort,
           search: debouncedSearch || undefined,
           limit: PAGE_SIZE,
@@ -120,16 +147,18 @@ export default function App() {
     } finally {
       setLoading(false);
     }
-  }, [filter, sort, debouncedSearch, reportError]);
+  }, [filter, genreFilter, yearMin, yearMax, sort, debouncedSearch, reportError]);
 
   const loadDatStatus = useCallback(async () => {
     try {
-      const [dats, cats] = await Promise.all([
+      const [dats, cats, genreList] = await Promise.all([
         api.listDatSources(),
         api.getCategoryStats().catch(() => ({ count: 0 })),
+        api.listGenres().catch(() => [] as string[]),
       ]);
       setActiveDatCount(dats.filter((dat) => dat.active).length);
       setCategoryCount(cats.count ?? 0);
+      setGenres(genreList);
     } catch (raw) {
       reportError(raw);
     }
@@ -384,7 +413,13 @@ export default function App() {
     <div className="app">
       <header className="app-header">
         <div className="app-brand">
-          <span className="app-title">AEONIC ARCADIA</span>
+          <img
+            className="app-logo"
+            src={logoUrl}
+            alt="Aeonic Arcadia"
+            width={180}
+            height={72}
+          />
           {appInfo && <span className="app-phase">{appInfo.phase}</span>}
         </div>
 
@@ -397,6 +432,44 @@ export default function App() {
             onChange={(event) => setSearch(event.target.value)}
             aria-label="Search by game name or filename"
           />
+          <label className="library-filter">
+            <span className="visually-hidden">Genre</span>
+            <select
+              value={genreFilter}
+              onChange={(event) => setGenreFilter(event.target.value)}
+              aria-label="Filter by genre"
+            >
+              <option value="">All genres</option>
+              {genres.map((genre) => (
+                <option key={genre} value={genre}>
+                  {genre}
+                </option>
+              ))}
+            </select>
+          </label>
+          <div className="library-year-range" role="group" aria-label="Year range">
+            <input
+              type="number"
+              inputMode="numeric"
+              min={1970}
+              max={2100}
+              placeholder="From"
+              value={yearMinInput}
+              onChange={(event) => setYearMinInput(event.target.value)}
+              aria-label="Minimum year"
+            />
+            <span aria-hidden="true">–</span>
+            <input
+              type="number"
+              inputMode="numeric"
+              min={1970}
+              max={2100}
+              placeholder="To"
+              value={yearMaxInput}
+              onChange={(event) => setYearMaxInput(event.target.value)}
+              aria-label="Maximum year"
+            />
+          </div>
           <label className="library-sort">
             <span className="visually-hidden">Sort</span>
             <select

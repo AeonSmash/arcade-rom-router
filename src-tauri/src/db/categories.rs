@@ -40,6 +40,29 @@ pub async fn replace_all(
     })
 }
 
+/// Distinct top-level CatVer genres (segment before ` / `), for library filters.
+pub async fn list_genres(pool: &SqlitePool) -> AppResult<Vec<String>> {
+    let rows = sqlx::query(
+        "SELECT DISTINCT
+             CASE
+                 WHEN instr(category, ' / ') > 0
+                 THEN substr(category, 1, instr(category, ' / ') - 1)
+                 ELSE category
+             END AS genre
+         FROM set_categories
+         WHERE TRIM(IFNULL(category, '')) != ''
+         ORDER BY genre COLLATE NOCASE",
+    )
+    .fetch_all(pool)
+    .await?;
+
+    Ok(rows
+        .into_iter()
+        .map(|row| row.get::<String, _>("genre"))
+        .filter(|genre| !genre.trim().is_empty())
+        .collect())
+}
+
 pub async fn stats(pool: &SqlitePool) -> AppResult<CategoryStats> {
     let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM set_categories")
         .fetch_one(pool)
@@ -113,5 +136,8 @@ mod tests {
         .await
         .unwrap();
         assert_eq!(cat, "Shooter / Flying Vertical");
+
+        let genres = list_genres(&pool).await.unwrap();
+        assert_eq!(genres, vec!["Maze".to_string(), "Shooter".to_string()]);
     }
 }

@@ -56,6 +56,10 @@ string_enum! {
         NameDesc => "NAME_DESC",
         SizeAsc => "SIZE_ASC",
         SizeDesc => "SIZE_DESC",
+        YearAsc => "YEAR_ASC",
+        YearDesc => "YEAR_DESC",
+        GenreAsc => "GENRE_ASC",
+        GenreDesc => "GENRE_DESC",
     }
 }
 
@@ -169,6 +173,9 @@ pub struct ArchiveRow {
     /// CatVer / genre category when known (e.g. "Shooter / Flying Vertical").
     #[serde(default)]
     pub genre: Option<String>,
+    /// DAT release year when known (stored as text in the DAT).
+    #[serde(default)]
+    pub year: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -223,6 +223,12 @@ export function ArchiveDetail({
         <dd>{formatBytes(archive.sizeBytes)}</dd>
         <dt>Inventory</dt>
         <dd>{state.label}</dd>
+        {archive.year && (
+          <>
+            <dt>Year</dt>
+            <dd>{archive.year}</dd>
+          </>
+        )}
         {archive.genre && (
           <>
             <dt>Genre</dt>
