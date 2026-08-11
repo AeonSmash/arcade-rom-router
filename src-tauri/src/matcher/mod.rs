@@ -450,6 +450,7 @@ pub async fn rematch_library(pool: &SqlitePool) -> AppResult<u64> {
         pool,
         &archives::ArchiveQuery {
             limit: 100_000,
+            favorites_only: false,
             ..Default::default()
         },
     )

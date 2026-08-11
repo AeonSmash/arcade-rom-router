@@ -27,6 +27,21 @@
   max-width: 62ch;
 }
 
+.library-layout-toggle {
+  display: flex;
+  gap: var(--space-1);
+  margin: var(--space-2) var(--space-5) 0;
+}
+
+.library-layout-toggle button {
+  font-size: var(--text-xs);
+}
+
+.library-layout-toggle button.is-active {
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  color: var(--accent);
+}
+
 .app-header {
   display: flex;
   align-items: center;

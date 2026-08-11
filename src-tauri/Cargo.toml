@@ -1,8 +1,8 @@
 [package]
-name = "arcade-rom-router"
-version = "0.2.1"
+name = "aeonic-arcadia"
+version = "0.3.0"
 description = "Evidence-based arcade ROM identification and automatic emulator routing."
-authors = ["Arcade ROM Router contributors"]
+authors = ["Aeonic Arcadia contributors"]
 edition = "2021"
 rust-version = "1.94"
 license = "MIT"
@@ -11,7 +11,7 @@ publish = false
 [lib]
 # The `_lib` suffix keeps the library name distinct from the binary name,
 # which Cargo requires on Windows (rust-lang/cargo#8519).
-name = "arcade_rom_router_lib"
+name = "aeonic_arcadia_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
@@ -19,12 +19,15 @@ tauri-build = { version = "2.6.3", features = [] }
 
 [dependencies]
 chrono = "0.4.45"
+keyring = { version = "3.6.3", features = ["windows-native"] }
 quick-xml = { version = "0.41.0", features = ["serialize"] }
+reqwest = { version = "0.12.23", default-features = false, features = ["rustls-tls"] }
+urlencoding = "2.1.3"
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.151"
 sha2 = "0.11.0"
 sqlx = { version = "0.9.0", default-features = false, features = ["runtime-tokio", "sqlite", "migrate", "macros"] }
-tauri = { version = "2.11.5", features = [] }
+tauri = { version = "2.11.5", features = ["protocol-asset"] }
 tauri-plugin-dialog = "2.7.2"
 tauri-plugin-opener = "2.5.4"
 thiserror = "2.0.20"

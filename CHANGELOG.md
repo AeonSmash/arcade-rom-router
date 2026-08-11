@@ -5,6 +5,35 @@ All notable changes to this project are recorded here. This project follows
 
 ## [Unreleased]
 
+## [0.3.0] — 2026-08-10
+
+Controllers, media, save states, favorites, and product rename.
+
+### Changed
+
+- Product renamed to **Aeonic Arcadia** (repo: https://github.com/AeonSmash/aeonic-arcadia).
+  Windows app identifier stays `com.arcaderomrouter.app` so existing AppData
+  libraries continue to load. EmuMovies credentials migrate from the old
+  keyring service name on next read; re-save if needed.
+- App phase string advances to Phase 12 — Controllers, Media, Save States.
+
+### Added
+
+- Phase 8 — Controller Center: Gamepad API detection, Xbox navigation defaults,
+  live button test panel, and UI navigation toggle.
+- Phase 8b — Router-owned RetroArch hotkey fragment for Exit/ESC (and optional
+  hold modifier) applied only via `--appendconfig`; never writes `retroarch.cfg`.
+- Phase 10 — Save state browser with labels, delete, and resume-at-launch.
+- Phase 11 — Local artwork folders, media cache, asset protocol scope, and
+  artwork-forward library grid.
+- Phase 12 — EmuMovies provider scaffold (credentials in OS keyring, disabled
+  by default; live API gated on developer access).
+- Favorites: toggle (detail button + `F` key), library sidebar category, and
+  `isFavorite` on archive rows.
+- EmuMovies sync: site username/password only (LaunchBox-style; app supplies
+  product id), gamesdbase.com login/search/download, Media settings checkboxes
+  for media types, Favorites-only or entire-library scope, and a sync summary.
+
 ## [0.2.1] — 2026-08-10
 
 ### Fixed
@@ -73,7 +102,8 @@ Initial release. Phase 0 repository foundation and Phase 1 ROM inventory.
 - Dynamic SQL is limited to placeholder counts and filter shape; every value is
   bound.
 
-[Unreleased]: https://github.com/AeonSmash/arcade-rom-router/compare/v0.2.1...HEAD
-[0.2.1]: https://github.com/AeonSmash/arcade-rom-router/releases/tag/v0.2.1
-[0.2.0]: https://github.com/AeonSmash/arcade-rom-router/releases/tag/v0.2.0
-[0.1.0]: https://github.com/AeonSmash/arcade-rom-router/releases/tag/v0.1.0
+[Unreleased]: https://github.com/AeonSmash/aeonic-arcadia/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/AeonSmash/aeonic-arcadia/releases/tag/v0.3.0
+[0.2.1]: https://github.com/AeonSmash/aeonic-arcadia/releases/tag/v0.2.1
+[0.2.0]: https://github.com/AeonSmash/aeonic-arcadia/releases/tag/v0.2.0
+[0.1.0]: https://github.com/AeonSmash/aeonic-arcadia/releases/tag/v0.1.0

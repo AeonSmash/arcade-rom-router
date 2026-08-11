@@ -11,6 +11,7 @@ pub async fn get_archives_page(
     rom_root_id: Option<i64>,
     archive_state: Option<ArchiveState>,
     search: Option<String>,
+    favorites_only: Option<bool>,
     limit: Option<i64>,
     offset: Option<i64>,
 ) -> AppResult<ArchivePage> {
@@ -18,6 +19,7 @@ pub async fn get_archives_page(
         rom_root_id,
         state: archive_state,
         search,
+        favorites_only: favorites_only.unwrap_or(false),
         limit: limit.unwrap_or(200),
         offset: offset.unwrap_or(0),
     };

@@ -9,10 +9,10 @@ use std::collections::HashMap;
 use std::path::Path;
 use std::sync::{Arc, Mutex};
 
-use arcade_rom_router_lib::db::archives::{self, ArchiveQuery};
-use arcade_rom_router_lib::db::{self, rom_roots};
-use arcade_rom_router_lib::model::{ArchiveRow, ArchiveState, JobState, RomRoot, ScanMode};
-use arcade_rom_router_lib::scanner::{
+use aeonic_arcadia_lib::db::archives::{self, ArchiveQuery};
+use aeonic_arcadia_lib::db::{self, rom_roots};
+use aeonic_arcadia_lib::model::{ArchiveRow, ArchiveState, JobState, RomRoot, ScanMode};
+use aeonic_arcadia_lib::scanner::{
     self, JobControl, NoopSink, ProgressSink, ScanCounters, ScanProgress, COMMIT_BATCH_SIZE,
 };
 use sqlx::SqlitePool;

@@ -146,6 +146,7 @@ pub struct ArchiveRow {
     pub unsafe_member_count: i64,
     pub error_detail: Option<String>,
     pub last_scanned_at: String,
+    pub is_favorite: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -168,6 +169,7 @@ pub struct LibrarySummary {
     pub indexed: i64,
     pub disk_images: i64,
     pub unreadable: i64,
+    pub favorites: i64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -355,6 +357,7 @@ pub struct GameDetail {
     pub matches: Vec<MatchResultRow>,
     pub members: Vec<ArchiveMemberRow>,
     pub dependencies: Vec<DependencyStatus>,
+    pub is_favorite: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -408,6 +411,163 @@ pub struct LaunchResult {
     pub core_path: String,
     pub content_path: String,
     pub log_path: Option<String>,
+}
+
+string_enum! {
+    UiNavAction {
+        NavigateUp => "NAVIGATE_UP",
+        NavigateDown => "NAVIGATE_DOWN",
+        NavigateLeft => "NAVIGATE_LEFT",
+        NavigateRight => "NAVIGATE_RIGHT",
+        Select => "SELECT",
+        Back => "BACK",
+        Favorite => "FAVORITE",
+        Details => "DETAILS",
+        PrevFilter => "PREV_FILTER",
+        NextFilter => "NEXT_FILTER",
+        ContextMenu => "CONTEXT_MENU",
+        Search => "SEARCH",
+    }
+}
+
+string_enum! {
+    MediaKind {
+        Box => "BOX",
+        Screenshot => "SCREENSHOT",
+        Title => "TITLE",
+        Marquee => "MARQUEE",
+        Cabinet => "CABINET",
+        Video => "VIDEO",
+        Manual => "MANUAL",
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ControllerDevice {
+    pub id: i64,
+    pub device_id: String,
+    pub display_name: String,
+    pub vendor_id: Option<i64>,
+    pub product_id: Option<i64>,
+    pub preset: String,
+    pub port: i64,
+    pub last_seen_at: String,
+    pub notes: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ControllerBinding {
+    pub id: i64,
+    pub controller_id: Option<i64>,
+    pub scope: String,
+    pub action: String,
+    pub button_index: Option<i64>,
+    pub button_label: Option<String>,
+    pub axis_index: Option<i64>,
+    pub axis_direction: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ControllerSettings {
+    pub navigation_enabled: bool,
+    pub devices: Vec<ControllerDevice>,
+    pub bindings: Vec<ControllerBinding>,
+    pub xbox_defaults: Vec<ControllerBinding>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HotkeyProfile {
+    pub id: i64,
+    pub name: String,
+    pub enabled: bool,
+    pub exit_btn: Option<i64>,
+    pub exit_btn_label: Option<String>,
+    pub enable_btn: Option<i64>,
+    pub enable_btn_label: Option<String>,
+    pub fragment_path: Option<String>,
+    pub verified: bool,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HotkeyFragmentPreview {
+    pub path: String,
+    pub content: String,
+    pub existing_content: String,
+    pub warnings: Vec<String>,
+    pub profile: HotkeyProfile,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SaveStateRow {
+    pub id: i64,
+    pub archive_id: i64,
+    pub slot: i64,
+    pub path: String,
+    pub size_bytes: i64,
+    pub modified_at: Option<String>,
+    pub label: Option<String>,
+    pub thumbnail_path: Option<String>,
+    pub is_entry: bool,
+    pub thumbnail_url: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MediaAsset {
+    pub id: i64,
+    pub archive_id: Option<i64>,
+    pub set_name: Option<String>,
+    pub kind: String,
+    pub path: String,
+    pub source: String,
+    pub width: Option<i64>,
+    pub height: Option<i64>,
+    pub sha256: Option<String>,
+    pub fetched_at: String,
+    pub asset_url: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GameMedia {
+    pub archive_id: i64,
+    pub assets: Vec<MediaAsset>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EmuMoviesStatus {
+    pub enabled: bool,
+    pub has_credentials: bool,
+    pub has_product_key: bool,
+    pub username: Option<String>,
+    pub api_ready: bool,
+    pub detail: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EmuMoviesSyncRequest {
+    pub kinds: Vec<String>,
+    /// `"favorites"` or `"all"`.
+    pub scope: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EmuMoviesSyncSummary {
+    pub processed: u64,
+    pub downloaded: u64,
+    pub skipped: u64,
+    pub failed: u64,
+    pub errors: Vec<String>,
 }
 
 #[cfg(test)]

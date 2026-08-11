@@ -84,6 +84,11 @@ export function ArchiveTable({ rows, loading, selectedId, onSelect }: Props) {
                 }}
               >
                 <span className="archive-name" title={row.path}>
+                  {row.isFavorite ? (
+                    <span className="archive-fav" aria-label="Favorite" title="Favorite">
+                      ★{" "}
+                    </span>
+                  ) : null}
                   {row.fileName}
                   {row.unsafeMemberCount > 0 && (
                     <span

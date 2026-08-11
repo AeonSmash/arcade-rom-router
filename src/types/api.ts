@@ -83,6 +83,7 @@ export interface ArchiveRow {
   unsafeMemberCount: number;
   errorDetail: string | null;
   lastScannedAt: string;
+  isFavorite: boolean;
 }
 
 export interface ArchiveMemberRow {
@@ -101,6 +102,7 @@ export interface LibrarySummary {
   indexed: number;
   diskImages: number;
   unreadable: number;
+  favorites: number;
 }
 
 export interface ArchivePage {
@@ -251,6 +253,7 @@ export interface GameDetail {
   matches: MatchResultRow[];
   members: ArchiveMemberRow[];
   dependencies: DependencyStatus[];
+  isFavorite: boolean;
 }
 
 export interface ProblemSummary {
@@ -272,6 +275,108 @@ export interface LaunchResult {
   corePath: string;
   contentPath: string;
   logPath: string | null;
+}
+
+export interface ControllerDevice {
+  id: number;
+  deviceId: string;
+  displayName: string;
+  vendorId: number | null;
+  productId: number | null;
+  preset: string;
+  port: number;
+  lastSeenAt: string;
+  notes: string | null;
+}
+
+export interface ControllerBinding {
+  id: number;
+  controllerId: number | null;
+  scope: string;
+  action: string;
+  buttonIndex: number | null;
+  buttonLabel: string | null;
+  axisIndex: number | null;
+  axisDirection: string | null;
+}
+
+export interface ControllerSettings {
+  navigationEnabled: boolean;
+  devices: ControllerDevice[];
+  bindings: ControllerBinding[];
+  xboxDefaults: ControllerBinding[];
+}
+
+export interface HotkeyProfile {
+  id: number;
+  name: string;
+  enabled: boolean;
+  exitBtn: number | null;
+  exitBtnLabel: string | null;
+  enableBtn: number | null;
+  enableBtnLabel: string | null;
+  fragmentPath: string | null;
+  verified: boolean;
+  updatedAt: string;
+}
+
+export interface HotkeyFragmentPreview {
+  path: string;
+  content: string;
+  existingContent: string;
+  warnings: string[];
+  profile: HotkeyProfile;
+}
+
+export interface SaveStateRow {
+  id: number;
+  archiveId: number;
+  slot: number;
+  path: string;
+  sizeBytes: number;
+  modifiedAt: string | null;
+  label: string | null;
+  thumbnailPath: string | null;
+  isEntry: boolean;
+  thumbnailUrl: string | null;
+}
+
+export interface MediaAsset {
+  id: number;
+  archiveId: number | null;
+  setName: string | null;
+  kind: string;
+  path: string;
+  source: string;
+  width: number | null;
+  height: number | null;
+  sha256: string | null;
+  fetchedAt: string;
+  assetUrl: string | null;
+}
+
+export interface GameMedia {
+  archiveId: number;
+  assets: MediaAsset[];
+}
+
+export interface EmuMoviesStatus {
+  enabled: boolean;
+  hasCredentials: boolean;
+  hasProductKey: boolean;
+  username: string | null;
+  apiReady: boolean;
+  detail: string;
+}
+
+export type EmuMoviesSyncScope = "favorites" | "all";
+
+export interface EmuMoviesSyncSummary {
+  processed: number;
+  downloaded: number;
+  skipped: number;
+  failed: number;
+  errors: string[];
 }
 
 export const TERMINAL_JOB_STATES: readonly JobState[] = [

@@ -1,11 +1,12 @@
-# Arcade ROM Router Progress
+# Aeonic Arcadia Progress
 
 ## Current phase
 
-Phase 7 — RetroArch Launch (complete for the RetroArch multi-core track).
+Phase 12 — Controllers, Media, Save States (Favorites + EmuMovies sync options).
 
 ## Release
 
+**v0.3.0** — Controllers, media, save states, favorites, EmuMovies sync, rename.
 **v0.2.1** — RetroArch discovery hardening and FinalBurn Neo core binding fix.
 **v0.2.0** — DAT import through RetroArch launch (Phases 2–7).
 
@@ -61,6 +62,36 @@ Phase 7 — RetroArch Launch (complete for the RetroArch multi-core track).
 - [x] Launch history + log file path
 - [x] Play button gated on verified routes
 
+### Phase 8 — Controller Center
+
+- [x] Gamepad API detection, Xbox preset, live test panel
+- [x] Configurable UI navigation bindings
+- [x] Exit/ESC hotkey via Router-owned `--appendconfig` fragment
+
+### Phase 10 — Save states
+
+- [x] Read-only `retroarch.cfg` parsing for savestate paths
+- [x] Slot index, labels, delete, resume-at-launch (`-e N`)
+
+### Phase 11 — Local media
+
+- [x] Artwork folders (box/screenshot/title/marquee/cabinet)
+- [x] Set/parent/title resolution + asset protocol
+- [x] Artwork-forward library grid
+
+### Phase 12 — EmuMovies
+
+- [x] MediaProvider trait + credential store (Windows Credential Manager)
+- [x] Disabled by default
+- [x] gamesdbase.com client (login / search / download) with Product/API key
+- [x] Sync UI: media-type checkboxes + favorites-only or entire library
+
+### Favorites (SPEC §53)
+
+- [x] Toggle + Favorites library filter
+- [x] Keyboard `F` when a game is selected
+- [x] Star affordance on list/grid/detail
+
 ## In progress
 
 Nothing.
@@ -68,7 +99,7 @@ Nothing.
 ## Next
 
 - Controller Center / cabinet mode
-- Artwork and richer game cards
+- Wire gamepad FAVORITE action into library navigation
 - Standalone MAME profile type (optional)
 - Core Online Updater convenience (optional)
 - Deeper packaging (split/merged) edge cases
@@ -93,6 +124,6 @@ Nothing.
 
 ## Tests
 
-- 78 passing (unit + inventory + DAT/match integration)
+- 96 passing (unit + inventory + DAT/match + favorites/EmuMovies parse)
 - 0 failing
 - TypeScript `tsc --strict` clean

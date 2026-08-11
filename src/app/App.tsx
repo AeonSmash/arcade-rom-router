@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { ErrorBanner } from "../components/ErrorBanner";
+import { ControllerCenter } from "../features/controller-center/ControllerCenter";
 import { DatManager } from "../features/dat-manager/DatManager";
 import { EmulatorManager } from "../features/emulator-manager/EmulatorManager";
 import { ArchiveDetail } from "../features/library/ArchiveDetail";
+import { ArchiveGrid } from "../features/library/ArchiveGrid";
 import { ArchiveTable } from "../features/library/ArchiveTable";
+import { MediaManager } from "../features/media/MediaManager";
 import { RomRootPanel } from "../features/onboarding/RomRootPanel";
 import { ProblemCenter } from "../features/problems/ProblemCenter";
 import { ScanProgressBar } from "../features/scanner/ScanProgressBar";
@@ -21,11 +24,13 @@ import type {
 } from "../types/api";
 import "./App.css";
 
-type LibraryFilter = "ALL" | ArchiveState;
-type View = "library" | "emulators" | "dats" | "problems";
+type LibraryFilter = "ALL" | "FAVORITES" | ArchiveState;
+type View = "library" | "emulators" | "dats" | "problems" | "controllers" | "media";
+type LibraryLayout = "table" | "grid";
 
 const FILTERS: { id: LibraryFilter; label: string }[] = [
   { id: "ALL", label: "All archives" },
+  { id: "FAVORITES", label: "Favorites" },
   { id: "INDEXED", label: "Indexed" },
   { id: "DISK_IMAGE_INDEXED", label: "Disk images" },
   { id: "ARCHIVE_UNREADABLE", label: "Unreadable" },
@@ -45,6 +50,7 @@ export default function App() {
   const [error, setError] = useState<AppErrorPayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeDatCount, setActiveDatCount] = useState(0);
+  const [libraryLayout, setLibraryLayout] = useState<LibraryLayout>("table");
 
   const reportError = useCallback((raw: unknown) => {
     setError(toAppError(raw));
@@ -63,7 +69,9 @@ export default function App() {
     try {
       setPage(
         await api.getArchivesPage({
-          archiveState: filter === "ALL" ? undefined : filter,
+          archiveState:
+            filter === "ALL" || filter === "FAVORITES" ? undefined : filter,
+          favoritesOnly: filter === "FAVORITES",
           search: debouncedSearch || undefined,
           limit: PAGE_SIZE,
         })
@@ -120,12 +128,38 @@ export default function App() {
       if (event.key === "f" && (event.ctrlKey || event.metaKey)) {
         event.preventDefault();
         document.getElementById("library-search")?.focus();
+        return;
+      }
+      // SPEC §55: F toggles favorite when a game is selected (ignore typing in inputs).
+      if (
+        event.key === "f" &&
+        !event.ctrlKey &&
+        !event.metaKey &&
+        !event.altKey &&
+        view === "library" &&
+        selected
+      ) {
+        const target = event.target as HTMLElement | null;
+        const tag = target?.tagName?.toLowerCase();
+        if (tag === "input" || tag === "textarea" || target?.isContentEditable) {
+          return;
+        }
+        event.preventDefault();
+        void (async () => {
+          try {
+            const next = await api.toggleFavorite(selected.id);
+            setSelected({ ...selected, isFavorite: next });
+            await loadArchives();
+          } catch (raw) {
+            reportError(raw);
+          }
+        })();
       }
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isRunning, roots]);
+  }, [isRunning, roots, view, selected, loadArchives, reportError]);
 
   async function startScan(mode: "QUICK" | "FULL" | "DEEP_VERIFY") {
     try {
@@ -141,6 +175,7 @@ export default function App() {
   const counts = useMemo(
     () => ({
       ALL: summary?.total ?? 0,
+      FAVORITES: summary?.favorites ?? 0,
       INDEXED: summary?.indexed ?? 0,
       DISK_IMAGE_INDEXED: summary?.diskImages ?? 0,
       ARCHIVE_UNREADABLE: summary?.unreadable ?? 0,
@@ -152,7 +187,7 @@ export default function App() {
     <div className="app">
       <header className="app-header">
         <div className="app-brand">
-          <span className="app-title">ARCADE ROM ROUTER</span>
+          <span className="app-title">AEONIC ARCADIA</span>
           {appInfo && <span className="app-phase">{appInfo.phase}</span>}
         </div>
 
@@ -220,6 +255,8 @@ export default function App() {
             [
               ["emulators", "Emulators"],
               ["dats", "DATs"],
+              ["controllers", "Controllers"],
+              ["media", "Media"],
               ["problems", "Problems"],
             ] as const
           ).map(([id, label]) => (
@@ -274,26 +311,63 @@ export default function App() {
               )}
 
               {roots.length > 0 && (
-                <div className="app-content">
-                  <ArchiveTable
-                    rows={page?.rows ?? []}
-                    loading={loading}
-                    selectedId={selected?.id ?? null}
-                    onSelect={(row) =>
-                      setSelected((current) =>
-                        current?.id === row.id ? null : row
-                      )
-                    }
-                  />
+                <>
+                  <div className="library-layout-toggle">
+                    <button
+                      type="button"
+                      className={libraryLayout === "table" ? "is-active" : ""}
+                      onClick={() => setLibraryLayout("table")}
+                    >
+                      List
+                    </button>
+                    <button
+                      type="button"
+                      className={libraryLayout === "grid" ? "is-active" : ""}
+                      onClick={() => setLibraryLayout("grid")}
+                    >
+                      Grid
+                    </button>
+                  </div>
+                  <div className="app-content">
+                    {libraryLayout === "table" ? (
+                      <ArchiveTable
+                        rows={page?.rows ?? []}
+                        loading={loading}
+                        selectedId={selected?.id ?? null}
+                        onSelect={(row) =>
+                          setSelected((current) =>
+                            current?.id === row.id ? null : row
+                          )
+                        }
+                      />
+                    ) : (
+                      <ArchiveGrid
+                        rows={page?.rows ?? []}
+                        loading={loading}
+                        selectedId={selected?.id ?? null}
+                        onSelect={(row) =>
+                          setSelected((current) =>
+                            current?.id === row.id ? null : row
+                          )
+                        }
+                      />
+                    )}
 
-                  {selected && (
-                    <ArchiveDetail
-                      archive={selected}
-                      onClose={() => setSelected(null)}
-                      onError={reportError}
-                    />
-                  )}
-                </div>
+                    {selected && (
+                      <ArchiveDetail
+                        archive={selected}
+                        onClose={() => setSelected(null)}
+                        onError={reportError}
+                        onFavoriteChanged={(isFavorite) => {
+                          setSelected((current) =>
+                            current ? { ...current, isFavorite } : current
+                          );
+                          void loadArchives();
+                        }}
+                      />
+                    )}
+                  </div>
+                </>
               )}
 
               {roots.length > 0 && page && (
@@ -326,6 +400,10 @@ export default function App() {
               onLibraryChanged={refreshAll}
             />
           )}
+          {view === "controllers" && (
+            <ControllerCenter onError={reportError} />
+          )}
+          {view === "media" && <MediaManager onError={reportError} />}
           {view === "problems" && <ProblemCenter onError={reportError} />}
         </main>
       </div>

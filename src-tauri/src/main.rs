@@ -2,5 +2,5 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
-    arcade_rom_router_lib::run();
+    aeonic_arcadia_lib::run();
 }

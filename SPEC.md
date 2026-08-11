@@ -1,7 +1,10 @@
-# Arcade ROM Router
+# Aeonic Arcadia
 ## Cursor-Ready Product, Architecture, and Implementation Specification
 
-**Working name:** Arcade ROM Router  
+**Working name:** Aeonic Arcadia  
+**Formerly:** Arcade ROM Router  
+
+
 **Document type:** Master implementation specification  
 **Primary target:** Windows 10/11 desktop  
 **Primary use case:** Scan a user-owned folder of legacy MAME/arcade ROM sets, identify which emulator/core definition each set matches, explain failures, and launch each playable game with the correct emulator automatically.  
@@ -306,7 +309,7 @@ Default production UI should expose INFO-level diagnostic history while keeping 
 # 6. Proposed Repository Structure
 
 ```text
-arcade-rom-router/
+aeonic-arcadia/
 ├─ README.md
 ├─ SPEC.md
 ├─ PROGRESS.md
@@ -1188,7 +1191,7 @@ The application should feel usable from a desk or a living-room arcade setup.
 
 ## 21.1 Division of responsibility
 
-**Arcade ROM Router**
+**Aeonic Arcadia**
 - controller detection in its UI;
 - controller-friendly navigation;
 - launch;
@@ -1335,7 +1338,7 @@ Characteristics:
 
 ```text
 ┌────────────────────────────────────────────────────────────┐
-│ ARCADE ROM ROUTER     Search…         Controller ●     ⚙  │
+│ Aeonic Arcadia     Search…         Controller ●     ⚙  │
 ├───────────────┬────────────────────────────────────────────┤
 │ Library       │                                            │
 │ Favorites     │     GAME GRID / LIST                       │
@@ -1930,7 +1933,7 @@ First launch.
 ## Step 1 — Welcome
 
 ```text
-Arcade ROM Router organizes mixed arcade ROM collections
+Aeonic Arcadia organizes mixed arcade ROM collections
 and automatically selects a compatible configured emulator.
 
 Your original ROM folder is read-only by default.
@@ -2959,7 +2962,7 @@ no source file changed
 
 MVP is complete when a Windows user can:
 
-1. install/open Arcade ROM Router;
+1. install/open Aeonic Arcadia;
 2. choose an original arcade ROM folder;
 3. choose/detect RetroArch;
 4. detect installed arcade cores;
@@ -3194,7 +3197,7 @@ before attempting core routing.
 First usable screen:
 
 ```text
-ARCADE ROM ROUTER
+Aeonic Arcadia
 
 ROM folder:
 D:\Arcade\Original-ROMs
@@ -3216,7 +3219,7 @@ This establishes safe scanning infrastructure.
 Cursor must keep this file current.
 
 ```markdown
-# Arcade ROM Router Progress
+# Aeonic Arcadia Progress
 
 ## Current phase
 Phase 2 — DAT Import
@@ -3810,9 +3813,9 @@ https://docs.libretro.com/guides/core-list/
 Use this or a polished equivalent.
 
 ```markdown
-# Arcade ROM Router
+# Aeonic Arcadia
 
-Arcade ROM Router is a local desktop library for mixed historical arcade ROM collections.
+Aeonic Arcadia is a local desktop library for mixed historical arcade ROM collections.
 
 Instead of forcing every ROM through one MAME version, it inventories each archive, compares its ROM-chip checksums against emulator-specific DAT definitions, identifies missing parent/BIOS/CHD dependencies, and chooses a verified installed emulator route automatically.
 
@@ -3827,7 +3830,7 @@ The normal experience is simple:
 
 Your original ROM directory is read-only by default.
 
-Arcade ROM Router does not include or download copyrighted ROMs, BIOS files, or CHDs.
+Aeonic Arcadia does not include or download copyrighted ROMs, BIOS files, or CHDs.
 ```
 
 ---
@@ -3837,7 +3840,7 @@ Arcade ROM Router does not include or download copyrighted ROMs, BIOS files, or 
 Paste the following into Cursor after placing this file in the new repository:
 
 ```text
-You are implementing Arcade ROM Router.
+You are implementing Aeonic Arcadia.
 
 Read SPEC.md completely before writing architecture code.
 
@@ -3882,7 +3885,7 @@ The first objective is a trustworthy ROM inventory engine.
 After Phase 1 is verified:
 
 ```text
-Continue Arcade ROM Router using SPEC.md as source of truth.
+Continue Aeonic Arcadia using SPEC.md as source of truth.
 
 Implement Phase 2 — DAT Import.
 
@@ -3917,7 +3920,7 @@ When complete:
 After DAT import is stable:
 
 ```text
-Continue Arcade ROM Router according to SPEC.md.
+Continue Aeonic Arcadia according to SPEC.md.
 
 Implement Phases 3 through 7 incrementally, with tests at each boundary:
 
@@ -3951,7 +3954,7 @@ The project is successful when the user can place decades of mixed arcade ROM ar
 The user should eventually experience:
 
 ```text
-Open Arcade ROM Router
+Open Aeonic Arcadia
         ↓
 Search “Galaga”
         ↓

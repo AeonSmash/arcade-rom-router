@@ -13,11 +13,68 @@ src-tauri/gen/schemas/
 *.db-shm
 logs/
 
-# ROM data must never enter the repository
+# ROM and disc images must never enter the repository.
+# Test archives are generated at runtime into temp dirs, so there is no
+# legitimate reason for any of these to appear in a commit.
 *.zip
 *.7z
+*.rar
 *.chd
-!tests/**/*.zip
+*.rom
+*.bin
+*.cue
+*.iso
+*.img
+*.gdi
+*.a78
+*.nes
+*.sfc
+*.smc
+*.gba
+*.nds
+*.pbp
+
+# BIOS, sample sets, and ROM folders
+/roms/
+/bios/
+/samples/
+/mame-roms/
+/mame roms*/
+
+# DAT definitions are user-supplied and often redistribution-restricted
+*.dat
+/dats/
+**/dats/
+mame*.xml
+
+# Artwork and media. Anchored to the repo root so the source folders
+# src/features/media/ and src-tauri/src/media/ stay tracked.
+/media/
+/artwork/
+/box/
+/screenshot/
+/title/
+/marquee/
+/cabinet/
+/video/
+/manual/
+/snap/
+
+# Emulator binaries, cores, and local emulator config
+/cores/
+/RetroArch*/
+retroarch.cfg
+*.dll
+*.exe
+
+# Save data and personal emulator state
+/saves/
+/states/
+*.state
+*.srm
+*.sav
+*.nv
+*.auto
 
 # Editor / OS
 .DS_Store
@@ -27,9 +84,13 @@ Thumbs.db
 .vscode/*
 !.vscode/extensions.json
 
-# Environment
+# Environment and secrets
 .env
 .env.*
+*.pem
+*.key
+secrets.json
+credentials.json
 
 # Local verification artifacts
 .app-screenshot.png

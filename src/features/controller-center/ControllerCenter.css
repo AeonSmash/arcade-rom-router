@@ -1,0 +1,122 @@
+.ctrl-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+}
+
+.ctrl-card {
+  background: var(--surface-1);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+}
+
+.ctrl-card h3 {
+  margin: 0 0 var(--space-3);
+}
+
+.ctrl-span {
+  grid-column: 1 / -1;
+}
+
+.ctrl-list,
+.ctrl-bind-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.ctrl-bind-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  font-size: var(--text-sm);
+}
+
+.ctrl-meta {
+  display: block;
+  color: var(--text-tertiary);
+  font-size: var(--text-sm);
+  margin-top: var(--space-1);
+}
+
+.ctrl-test {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin-top: var(--space-2);
+  min-height: 1.5rem;
+}
+
+.ctrl-pill {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 2px var(--space-2);
+  border-radius: 999px;
+  background: var(--bg-2);
+  color: var(--text-secondary);
+}
+
+.ctrl-pill.is-on {
+  background: var(--accent-dim);
+  color: var(--accent);
+}
+
+.ctrl-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.ctrl-hotkey-facts {
+  display: grid;
+  grid-template-columns: 12rem 1fr;
+  gap: var(--space-2) var(--space-3);
+  margin: 0 0 var(--space-4);
+}
+
+.ctrl-hotkey-facts dt {
+  color: var(--text-tertiary);
+  font-size: var(--text-sm);
+}
+
+.ctrl-hotkey-facts dd {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.ctrl-preview {
+  margin-top: var(--space-4);
+}
+
+.ctrl-preview pre {
+  margin: var(--space-2) 0 0;
+  padding: var(--space-3);
+  background: var(--bg-0);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  overflow: auto;
+  font-size: var(--text-xs);
+  font-family: var(--font-mono);
+}
+
+.ctrl-warn {
+  color: #f0c674;
+  font-size: var(--text-sm);
+  margin: 0 0 var(--space-2);
+}
+
+@media (max-width: 960px) {
+  .ctrl-grid {
+    grid-template-columns: 1fr;
+  }
+}

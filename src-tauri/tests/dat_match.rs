@@ -5,12 +5,12 @@ mod common;
 use std::io::Write;
 use std::sync::Arc;
 
-use arcade_rom_router_lib::dat;
-use arcade_rom_router_lib::db::{self, archives, rom_roots};
-use arcade_rom_router_lib::matcher;
-use arcade_rom_router_lib::model::{CompatibilityState, ScanMode};
-use arcade_rom_router_lib::scanner::{self, JobControl, NoopSink};
-use arcade_rom_router_lib::routing;
+use aeonic_arcadia_lib::dat;
+use aeonic_arcadia_lib::db::{self, archives, rom_roots};
+use aeonic_arcadia_lib::matcher;
+use aeonic_arcadia_lib::model::{CompatibilityState, ScanMode};
+use aeonic_arcadia_lib::scanner::{self, JobControl, NoopSink};
+use aeonic_arcadia_lib::routing;
 use sqlx::SqlitePool;
 use tempfile::TempDir;
 
@@ -44,7 +44,7 @@ async fn install_fake_core(pool: &SqlitePool, profile_id: &str, dir: &std::path:
     )
     .await
     .unwrap();
-    db::profiles::set_health(pool, profile_id, arcade_rom_router_lib::model::HealthState::Healthy)
+    db::profiles::set_health(pool, profile_id, aeonic_arcadia_lib::model::HealthState::Healthy)
         .await
         .unwrap();
 }

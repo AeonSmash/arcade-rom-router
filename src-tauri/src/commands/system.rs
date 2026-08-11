@@ -22,9 +22,9 @@ pub struct AppInfo {
 #[tauri::command]
 pub async fn get_app_info(state: State<'_, AppState>) -> AppResult<AppInfo> {
     Ok(AppInfo {
-        name: "Arcade ROM Router".into(),
+        name: "Aeonic Arcadia".into(),
         version: env!("CARGO_PKG_VERSION").into(),
-        phase: "Phase 7 — Emulator Routing".into(),
+        phase: "Phase 12 — Controllers, Media, Save States".into(),
         app_data_dir: state.app_data_dir.display().to_string(),
         log_dir: state.log_dir.display().to_string(),
         default_worker_count: scanner::default_worker_count(),

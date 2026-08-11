@@ -13,7 +13,7 @@ export function DesktopOnlyNotice() {
   return (
     <main className="desktop-only">
       <div className="desktop-only-card">
-        <p className="desktop-only-eyebrow">Arcade ROM Router</p>
+        <p className="desktop-only-eyebrow">Aeonic Arcadia</p>
         <h1>Open the desktop window instead</h1>
         <p>
           This page is the development server for the interface only. The
@@ -23,7 +23,7 @@ export function DesktopOnlyNotice() {
         <p>Run the app from the project folder:</p>
         <pre>npm run tauri dev</pre>
         <p className="desktop-only-hint">
-          A separate window titled &ldquo;Arcade ROM Router&rdquo; will open. Use
+          A separate window titled &ldquo;Aeonic Arcadia&rdquo; will open. Use
           that window; you can close this tab.
         </p>
       </div>

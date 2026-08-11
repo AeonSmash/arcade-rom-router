@@ -105,7 +105,7 @@ export function EmulatorManager({ onError, onOpenDats }: Props) {
         <div>
           <h2>Emulators</h2>
           <p>
-            Arcade ROM Router launches through RetroArch with an explicit core
+            Aeonic Arcadia launches through RetroArch with an explicit core
             per game. Discover your install, then import a matching DAT for each
             core you want to use.
           </p>

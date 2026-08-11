@@ -233,6 +233,7 @@ pub struct ArchiveQuery {
     pub rom_root_id: Option<i64>,
     pub state: Option<ArchiveState>,
     pub search: Option<String>,
+    pub favorites_only: bool,
     pub limit: i64,
     pub offset: i64,
 }
@@ -243,6 +244,7 @@ impl Default for ArchiveQuery {
             rom_root_id: None,
             state: None,
             search: None,
+            favorites_only: false,
             limit: 200,
             offset: 0,
         }
@@ -251,6 +253,10 @@ impl Default for ArchiveQuery {
 
 fn map_archive_row(row: &sqlx::sqlite::SqliteRow) -> ArchiveRow {
     let stored_state: String = row.get("archive_state");
+    let is_favorite = row
+        .try_get::<i64, _>("is_favorite")
+        .map(|v| v != 0)
+        .unwrap_or(false);
     ArchiveRow {
         id: row.get("id"),
         rom_root_id: row.get("rom_root_id"),
@@ -268,6 +274,7 @@ fn map_archive_row(row: &sqlx::sqlite::SqliteRow) -> ArchiveRow {
         unsafe_member_count: row.get("unsafe_member_count"),
         error_detail: row.get("error_detail"),
         last_scanned_at: row.get("last_scanned_at"),
+        is_favorite,
     }
 }
 
@@ -297,10 +304,13 @@ fn bind_filter_values<'q>(
 pub async fn page(pool: &SqlitePool, query: &ArchiveQuery) -> AppResult<ArchivePage> {
     let mut conditions: Vec<&str> = Vec::new();
     if query.rom_root_id.is_some() {
-        conditions.push("rom_root_id = ?");
+        conditions.push("a.rom_root_id = ?");
     }
     if query.state.is_some() {
-        conditions.push("archive_state = ?");
+        conditions.push("a.archive_state = ?");
+    }
+    if query.favorites_only {
+        conditions.push("f.archive_id IS NOT NULL");
     }
     let search_term = query
         .search
@@ -309,7 +319,7 @@ pub async fn page(pool: &SqlitePool, query: &ArchiveQuery) -> AppResult<ArchiveP
         .filter(|s| !s.is_empty())
         .map(|s| format!("%{}%", s.replace('\\', "\\\\").replace('%', "\\%").replace('_', "\\_")));
     if search_term.is_some() {
-        conditions.push("file_name LIKE ? ESCAPE '\\'");
+        conditions.push("a.file_name LIKE ? ESCAPE '\\'");
     }
 
     let where_clause = if conditions.is_empty() {
@@ -322,14 +332,23 @@ pub async fn page(pool: &SqlitePool, query: &ArchiveQuery) -> AppResult<ArchiveP
 
     // Audited: `where_clause` is assembled from the fixed fragments above and
     // contains no caller-supplied text.
-    let count_sql = format!("SELECT COUNT(*) FROM archives {where_clause}");
+    let count_sql = format!(
+        "SELECT COUNT(*) FROM archives a
+         LEFT JOIN favorites f ON f.archive_id = a.id
+         {where_clause}"
+    );
     let total_matching: i64 = bind_filters(sqlx::query(sqlx::AssertSqlSafe(count_sql)))
         .fetch_one(pool)
         .await?
         .get(0);
 
     let rows_sql = format!(
-        "SELECT * FROM archives {where_clause} ORDER BY file_name COLLATE NOCASE, id LIMIT ? OFFSET ?"
+        "SELECT a.*, CASE WHEN f.archive_id IS NULL THEN 0 ELSE 1 END AS is_favorite
+         FROM archives a
+         LEFT JOIN favorites f ON f.archive_id = a.id
+         {where_clause}
+         ORDER BY a.file_name COLLATE NOCASE, a.id
+         LIMIT ? OFFSET ?"
     );
     let rows = bind_filters(sqlx::query(sqlx::AssertSqlSafe(rows_sql)))
         .bind(query.limit.clamp(1, 5_000))
@@ -356,19 +375,29 @@ pub async fn summary(pool: &SqlitePool) -> AppResult<LibrarySummary> {
     .fetch_one(pool)
     .await?;
 
+    let favorites: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM favorites")
+        .fetch_one(pool)
+        .await?;
+
     Ok(LibrarySummary {
         total: row.get("total"),
         indexed: row.get("indexed"),
         disk_images: row.get("disk_images"),
         unreadable: row.get("unreadable"),
+        favorites,
     })
 }
 
 pub async fn get(pool: &SqlitePool, id: i64) -> AppResult<Option<ArchiveRow>> {
-    let row = sqlx::query("SELECT * FROM archives WHERE id = ?1")
-        .bind(id)
-        .fetch_optional(pool)
-        .await?;
+    let row = sqlx::query(
+        "SELECT a.*, CASE WHEN f.archive_id IS NULL THEN 0 ELSE 1 END AS is_favorite
+         FROM archives a
+         LEFT JOIN favorites f ON f.archive_id = a.id
+         WHERE a.id = ?1",
+    )
+    .bind(id)
+    .fetch_optional(pool)
+    .await?;
     Ok(row.as_ref().map(map_archive_row))
 }
 
@@ -536,6 +565,43 @@ mod tests {
         .await
         .unwrap();
         assert_eq!(searched.total_matching, 1);
+    }
+
+    #[tokio::test]
+    async fn favorites_only_filters_and_flags_rows() {
+        use crate::db::favorites;
+
+        let (pool, root_id) = setup().await;
+        commit_batch(
+            &pool,
+            &[
+                sample(root_id, "1942.zip", ArchiveState::Indexed, 1),
+                sample(root_id, "sf2.zip", ArchiveState::Indexed, 1),
+            ],
+        )
+        .await
+        .unwrap();
+
+        let all = page(&pool, &ArchiveQuery::default()).await.unwrap();
+        assert_eq!(all.total_matching, 2);
+        assert!(!all.rows[0].is_favorite);
+
+        let fav_id = all.rows.iter().find(|r| r.file_name == "sf2.zip").unwrap().id;
+        assert!(favorites::toggle(&pool, fav_id).await.unwrap());
+
+        let favs = page(
+            &pool,
+            &ArchiveQuery {
+                favorites_only: true,
+                ..Default::default()
+            },
+        )
+        .await
+        .unwrap();
+        assert_eq!(favs.total_matching, 1);
+        assert_eq!(favs.rows[0].file_name, "sf2.zip");
+        assert!(favs.rows[0].is_favorite);
+        assert_eq!(favs.summary.favorites, 1);
     }
 
     #[tokio::test]

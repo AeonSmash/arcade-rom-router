@@ -5,12 +5,17 @@
 //! parameterized (SPEC.md section 43.3).
 
 pub mod archives;
+pub mod controllers;
 pub mod dats;
+pub mod favorites;
+pub mod hotkeys;
 pub mod machines;
 pub mod matches;
+pub mod media;
 pub mod profiles;
 pub mod rom_roots;
 pub mod routes;
+pub mod save_states;
 pub mod scan_jobs;
 pub mod settings;
 

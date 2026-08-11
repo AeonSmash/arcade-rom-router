@@ -1,6 +1,6 @@
 use tauri::State;
 
-use crate::db::{archives, matches as matches_db, routes};
+use crate::db::{archives, favorites, matches as matches_db, routes};
 use crate::error::{AppError, AppResult};
 use crate::launch;
 use crate::matcher;
@@ -93,6 +93,8 @@ pub async fn get_game_detail(state: State<'_, AppState>, archive_id: i64) -> App
         }
     }
 
+    let is_favorite = favorites::is_favorite(&state.pool, archive_id).await?;
+
     Ok(GameDetail {
         archive,
         can_run,
@@ -102,6 +104,7 @@ pub async fn get_game_detail(state: State<'_, AppState>, archive_id: i64) -> App
         matches,
         members,
         dependencies,
+        is_favorite,
     })
 }
 
@@ -137,7 +140,16 @@ pub async fn launch_game(
     state: State<'_, AppState>,
     archive_id: i64,
     route_id: Option<i64>,
+    save_state_id: Option<i64>,
 ) -> AppResult<LaunchResult> {
     let log_dir = state.log_dir.join("launches");
-    launch::launch_game(&state.pool, &log_dir, archive_id, route_id).await
+    launch::launch_game(
+        &state.pool,
+        &log_dir,
+        &state.app_data_dir,
+        archive_id,
+        route_id,
+        save_state_id,
+    )
+    .await
 }

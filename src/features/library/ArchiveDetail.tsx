@@ -1,3 +1,4 @@
+import { convertFileSrc } from "@tauri-apps/api/core";
 import { useEffect, useState } from "react";
 
 import { api } from "../../lib/api";
@@ -6,22 +7,43 @@ import {
   formatBytes,
   formatTimestamp,
 } from "../../lib/format";
-import type { ArchiveRow, GameDetail } from "../../types/api";
+import type {
+  ArchiveRow,
+  GameDetail,
+  GameMedia,
+  SaveStateRow,
+} from "../../types/api";
 import "./ArchiveDetail.css";
 
 interface Props {
   archive: ArchiveRow;
   onClose: () => void;
   onError: (error: unknown) => void;
+  onFavoriteChanged?: (isFavorite: boolean) => void;
 }
 
-export function ArchiveDetail({ archive, onClose, onError }: Props) {
+export function ArchiveDetail({
+  archive,
+  onClose,
+  onError,
+  onFavoriteChanged,
+}: Props) {
   const [detail, setDetail] = useState<GameDetail | null>(null);
+  const [media, setMedia] = useState<GameMedia | null>(null);
+  const [states, setStates] = useState<SaveStateRow[]>([]);
   const [launching, setLaunching] = useState(false);
+  const [favoriteBusy, setFavoriteBusy] = useState(false);
 
   async function reload() {
     try {
-      setDetail(await api.getGameDetail(archive.id));
+      const [game, gameMedia, saveStates] = await Promise.all([
+        api.getGameDetail(archive.id),
+        api.getGameMedia(archive.id).catch(() => null),
+        api.listSaveStates(archive.id).catch(() => [] as SaveStateRow[]),
+      ]);
+      setDetail(game);
+      setMedia(gameMedia);
+      setStates(saveStates);
     } catch (error) {
       onError(error);
     }
@@ -29,14 +51,24 @@ export function ArchiveDetail({ archive, onClose, onError }: Props) {
 
   useEffect(() => {
     setDetail(null);
+    setMedia(null);
+    setStates([]);
     void reload();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [archive.id]);
 
-  async function play() {
+  async function play(saveStateId?: number) {
     try {
       setLaunching(true);
-      await api.launchGame(archive.id, detail?.selectedRoute?.id);
+      if (saveStateId != null) {
+        await api.launchGameWithState(
+          archive.id,
+          saveStateId,
+          detail?.selectedRoute?.id
+        );
+      } else {
+        await api.launchGame(archive.id, detail?.selectedRoute?.id);
+      }
     } catch (error) {
       onError(error);
     } finally {
@@ -53,29 +85,90 @@ export function ArchiveDetail({ archive, onClose, onError }: Props) {
     }
   }
 
+  async function toggleFavorite() {
+    try {
+      setFavoriteBusy(true);
+      const next = await api.toggleFavorite(archive.id);
+      onFavoriteChanged?.(next);
+      await reload();
+    } catch (error) {
+      onError(error);
+    } finally {
+      setFavoriteBusy(false);
+    }
+  }
+
+  async function removeState(id: number) {
+    try {
+      await api.deleteSaveState(id);
+      await reload();
+    } catch (error) {
+      onError(error);
+    }
+  }
+
   const state = describeArchiveState(archive.archiveState);
   const canPlay = detail?.canRun === "YES";
+  const isFavorite = detail?.isFavorite ?? archive.isFavorite;
+  const boxArt =
+    media?.assets.find((a) => a.kind === "BOX") ??
+    media?.assets.find((a) => a.kind === "TITLE") ??
+    media?.assets[0];
 
   return (
     <aside className="archive-detail" aria-label={`Details for ${archive.fileName}`}>
       <header className="archive-detail-header">
-        <h2 title={archive.fileName}>{archive.fileName}</h2>
+        <h2 title={archive.fileName}>
+          {isFavorite ? "★ " : ""}
+          {archive.fileName}
+        </h2>
         <button type="button" className="quiet" onClick={onClose} aria-label="Close details">
           ✕
         </button>
       </header>
 
+      {boxArt && (
+        <img
+          className="archive-detail-art"
+          src={convertFileSrc(boxArt.path)}
+          alt=""
+        />
+      )}
+
       {detail && (
         <div className={`can-run can-run-${detail.canRun.toLowerCase()}`}>
           <strong>Can this run? {detail.canRun}</strong>
           <p>{detail.canRunReason}</p>
+          <div className="archive-detail-row-actions">
+            <button
+              type="button"
+              className="primary"
+              disabled={!canPlay || launching}
+              onClick={() => void play()}
+            >
+              {launching ? "Launching…" : "Play"}
+            </button>
+            <button
+              type="button"
+              disabled={favoriteBusy}
+              onClick={() => void toggleFavorite()}
+              aria-pressed={isFavorite}
+            >
+              {isFavorite ? "★ Favorited" : "☆ Favorite"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {!detail && (
+        <div className="archive-detail-row-actions">
           <button
             type="button"
-            className="primary"
-            disabled={!canPlay || launching}
-            onClick={() => void play()}
+            disabled={favoriteBusy}
+            onClick={() => void toggleFavorite()}
+            aria-pressed={isFavorite}
           >
-            {launching ? "Launching…" : "Play"}
+            {isFavorite ? "★ Favorited" : "☆ Favorite"}
           </button>
         </div>
       )}
@@ -100,6 +193,46 @@ export function ArchiveDetail({ archive, onClose, onError }: Props) {
           </>
         )}
       </dl>
+
+      {states.length > 0 && (
+        <>
+          <h3 className="archive-detail-section">Save states</h3>
+          <ul className="route-list">
+            {states.map((s) => (
+              <li key={s.id}>
+                <div>
+                  <strong>
+                    Slot {s.slot}
+                    {s.isEntry ? " (entry)" : ""}
+                    {s.label ? ` — ${s.label}` : ""}
+                  </strong>
+                  <p>
+                    {formatBytes(s.sizeBytes)}
+                    {s.modifiedAt ? ` · ${formatTimestamp(s.modifiedAt)}` : ""}
+                  </p>
+                </div>
+                <div className="archive-detail-row-actions">
+                  <button
+                    type="button"
+                    className="primary quiet"
+                    disabled={!canPlay || launching}
+                    onClick={() => void play(s.id)}
+                  >
+                    Resume
+                  </button>
+                  <button
+                    type="button"
+                    className="quiet"
+                    onClick={() => void removeState(s.id)}
+                  >
+                    Delete
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
 
       {detail && detail.dependencies.length > 0 && (
         <>

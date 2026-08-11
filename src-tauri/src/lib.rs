@@ -1,10 +1,11 @@
-//! Arcade ROM Router backend.
+//! Aeonic Arcadia backend.
 //!
-//! Phases 0–7: inventory, DAT import, matching, dependencies, emulator
-//! profiles, routing, and RetroArch launch.
+//! Phases 0–12: inventory through launch, controllers, hotkeys, media, and
+//! save states.
 
 pub mod archive;
 pub mod commands;
+pub mod controller;
 pub mod dat;
 pub mod db;
 pub mod emulator;
@@ -12,6 +13,7 @@ pub mod error;
 pub mod launch;
 pub mod logging;
 pub mod matcher;
+pub mod media;
 pub mod model;
 pub mod routing;
 pub mod scanner;
@@ -41,7 +43,7 @@ pub fn run() {
             info!(
                 version = env!("CARGO_PKG_VERSION"),
                 data = %app_data_dir.display(),
-                "Arcade ROM Router starting"
+                "Aeonic Arcadia starting"
             );
 
             let database_path = app_data_dir.join(DATABASE_FILE);
@@ -85,6 +87,7 @@ pub fn run() {
             commands::library::get_archives_page,
             commands::library::get_archive_members,
             commands::library::get_library_summary,
+            commands::favorites::toggle_favorite,
             commands::settings::get_settings,
             commands::settings::set_setting,
             commands::dats::list_dat_sources,
@@ -102,7 +105,33 @@ pub fn run() {
             commands::games::set_game_route_override,
             commands::games::set_route_preference_mode,
             commands::games::launch_game,
+            commands::controllers::list_controllers,
+            commands::controllers::get_controller_settings,
+            commands::controllers::report_controller,
+            commands::controllers::set_controller_binding,
+            commands::controllers::set_controller_navigation_enabled,
+            commands::hotkeys::get_hotkey_profile,
+            commands::hotkeys::set_hotkey_binding,
+            commands::hotkeys::preview_hotkey_fragment,
+            commands::hotkeys::apply_hotkey_fragment,
+            commands::hotkeys::set_hotkey_profile_enabled,
+            commands::hotkeys::mark_hotkey_verified,
+            commands::media::get_game_media,
+            commands::media::set_media_folder,
+            commands::media::get_media_folder,
+            commands::media::scan_local_media,
+            commands::media::clear_media_cache,
+            commands::media::get_emumovies_status,
+            commands::media::set_emumovies_enabled,
+            commands::media::set_emumovies_credentials,
+            commands::media::clear_emumovies_credentials,
+            commands::media::fetch_emumovies_media,
+            commands::media::sync_emumovies_media,
+            commands::save_states::list_save_states,
+            commands::save_states::label_save_state,
+            commands::save_states::delete_save_state,
+            commands::save_states::launch_game_with_state,
         ])
         .run(tauri::generate_context!())
-        .expect("error while running Arcade ROM Router");
+        .expect("error while running Aeonic Arcadia");
 }

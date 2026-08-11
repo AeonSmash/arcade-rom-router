@@ -1,23 +1,27 @@
-//! Safe RetroArch launch (Phase 7).
+//! Safe RetroArch launch (Phase 7 + hotkeys/save-state resume).
 //!
-//! Frontend may only send `{ archiveId, routeId }`. Paths are resolved here and
-//! passed as an argument array — never through a shell (SPEC.md §20 / §43.2).
+//! Frontend may only send `{ archiveId, routeId, saveStateId? }`. Paths are
+//! resolved here and passed as an argument array — never through a shell
+//! (SPEC.md §20 / §43.2).
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::Stdio;
 
 use sqlx::SqlitePool;
 use tracing::info;
 
-use crate::db::{now_iso8601, profiles, routes};
+use crate::db::{now_iso8601, profiles, routes, save_states as save_states_db};
+use crate::emulator::{hotkeys, savestates};
 use crate::error::{AppError, AppResult};
 use crate::model::LaunchResult;
 
 pub async fn launch_game(
     pool: &SqlitePool,
     log_dir: &Path,
+    app_data_dir: &Path,
     archive_id: i64,
     route_id: Option<i64>,
+    save_state_id: Option<i64>,
 ) -> AppResult<LaunchResult> {
     let route = if let Some(id) = route_id {
         routes::get(pool, id)
@@ -49,7 +53,6 @@ pub async fn launch_game(
         ));
     }
 
-    // Explicit unverified override still requires a core and executable.
     let allow_unverified: bool =
         crate::db::settings::get_or(pool, "routing.allowUnverifiedLaunch", false).await;
     if !route.launchable && route.user_override && !allow_unverified {
@@ -80,7 +83,9 @@ pub async fn launch_game(
 
     let profile = profiles::get(pool, &route.emulator_profile_id)
         .await?
-        .ok_or_else(|| AppError::config("Profile missing", "The emulator profile no longer exists."))?;
+        .ok_or_else(|| {
+            AppError::config("Profile missing", "The emulator profile no longer exists.")
+        })?;
 
     let exe = profile.executable_path.ok_or_else(|| {
         AppError::user(
@@ -111,6 +116,32 @@ pub async fn launch_game(
         ));
     }
 
+    let mut entry_slot: Option<i64> = None;
+    if let Some(state_id) = save_state_id {
+        let state = save_states_db::get(pool, state_id)
+            .await?
+            .filter(|s| s.archive_id == archive_id)
+            .ok_or_else(|| {
+                AppError::user(
+                    "Save state not found",
+                    "That save state does not belong to this archive.",
+                )
+            })?;
+        if !Path::new(&state.path).is_file() {
+            return Err(AppError::user(
+                "Save state missing",
+                format!("The save state file is gone:\n{}", state.path),
+            ));
+        }
+        if state.is_entry {
+            entry_slot = Some(state.slot);
+        } else {
+            // Promote to entry state so -e N can load it.
+            let _ = savestates::promote_to_entry(Path::new(&state.path), state.slot)?;
+            entry_slot = Some(state.slot);
+        }
+    }
+
     std::fs::create_dir_all(log_dir).map_err(|source| AppError::Filesystem {
         path: log_dir.display().to_string(),
         source,
@@ -123,12 +154,18 @@ pub async fn launch_game(
         started_at.replace(':', "").replace('.', "")
     ));
 
+    let appendconfig = hotkeys::appendconfig_for_launch(pool, app_data_dir).await?;
+
     // Argument array only — never shell concatenation.
     let mut command = std::process::Command::new(&exe);
+    command.arg("-L").arg(&core).arg(&content_path);
+    if let Some(fragment) = appendconfig.as_ref() {
+        command.arg("--appendconfig").arg(fragment);
+    }
+    if let Some(slot) = entry_slot {
+        command.arg("-e").arg(slot.to_string());
+    }
     command
-        .arg("-L")
-        .arg(&core)
-        .arg(&content_path)
         .arg("--verbose")
         .arg("--log-file")
         .arg(&log_path)
@@ -160,10 +197,11 @@ pub async fn launch_game(
         route_id = route.id,
         profile = %profile.id,
         pid,
+        entry_slot,
+        appendconfig = ?appendconfig.as_ref().map(PathBuf::as_path),
         "launch started"
     );
 
-    // Detach: do not wait. Exit code can be recorded later by a watcher if needed.
     std::mem::drop(child);
 
     Ok(LaunchResult {

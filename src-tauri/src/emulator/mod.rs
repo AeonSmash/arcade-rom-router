@@ -1,5 +1,9 @@
 //! RetroArch discovery, core scan, and profile health (Phase 5).
 
+pub mod hotkeys;
+pub mod retro_cfg;
+pub mod savestates;
+
 use std::path::{Path, PathBuf};
 
 use sqlx::SqlitePool;

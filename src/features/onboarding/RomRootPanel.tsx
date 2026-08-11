@@ -55,7 +55,7 @@ export function RomRootPanel({ roots, busy, onChanged, onError }: Props) {
       <section className="rom-root-empty">
         <h2>Choose your arcade ROM folder</h2>
         <p>
-          Arcade ROM Router inventories mixed arcade ROM collections and reads
+          Aeonic Arcadia inventories mixed arcade ROM collections and reads
           each archive&rsquo;s ROM-chip checksums.
         </p>
         <p className="rom-root-assurance">
