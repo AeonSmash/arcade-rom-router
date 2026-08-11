@@ -50,6 +50,16 @@ string_enum! {
 }
 
 string_enum! {
+    /// Library list ordering.
+    ArchiveSort {
+        NameAsc => "NAME_ASC",
+        NameDesc => "NAME_DESC",
+        SizeAsc => "SIZE_ASC",
+        SizeDesc => "SIZE_DESC",
+    }
+}
+
+string_enum! {
     JobType {
         FullScan => "FULL_SCAN",
         IncrementalScan => "INCREMENTAL_SCAN",
@@ -147,6 +157,26 @@ pub struct ArchiveRow {
     pub error_detail: Option<String>,
     pub last_scanned_at: String,
     pub is_favorite: bool,
+    /// True when at least one launchable route exists for this archive.
+    #[serde(default)]
+    pub can_run: bool,
+    /// DAT machine description when matched (e.g. "Ms. Pac-Man (Midway)").
+    #[serde(default)]
+    pub display_name: Option<String>,
+    /// DAT set name when matched (e.g. "mspacman").
+    #[serde(default)]
+    pub set_name: Option<String>,
+    /// CatVer / genre category when known (e.g. "Shooter / Flying Vertical").
+    #[serde(default)]
+    pub genre: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CategoryStats {
+    pub count: i64,
+    pub source_path: Option<String>,
+    pub imported_at: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -169,6 +199,9 @@ pub struct LibrarySummary {
     pub indexed: i64,
     pub disk_images: i64,
     pub unreadable: i64,
+    /// Archives with at least one launchable route.
+    #[serde(default)]
+    pub readable: i64,
     pub favorites: i64,
 }
 
@@ -327,6 +360,9 @@ pub struct MatchResultRow {
     pub created_at: String,
     pub machine: Option<MachineSummary>,
     pub profile_display_name: Option<String>,
+    /// Required ROM names that failed CRC/name checks (from evidence JSON).
+    #[serde(default)]
+    pub missing_chips: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -381,6 +417,66 @@ pub struct ProblemSummary {
     pub unreadable: i64,
     pub core_not_installed: i64,
     pub dat_not_installed: i64,
+    /// Selected/best match is incomplete, but another profile has a verified route.
+    pub playable_on_other_emulator: i64,
+    /// No profile has a launchable match for this archive.
+    pub no_working_emulator: i64,
+    pub wrong_rom_revision: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProblemGameRow {
+    pub archive_id: i64,
+    pub file_name: String,
+    pub set_name: Option<String>,
+    pub state: CompatibilityState,
+    pub emulator_profile_id: String,
+    pub profile_display_name: Option<String>,
+    pub missing_count: i64,
+    pub required_count: i64,
+    pub missing_chips: Vec<String>,
+    pub works_on_profiles: Vec<String>,
+    pub suggestion: Option<String>,
+    pub match_result_id: i64,
+}
+
+/// Problem Center group keys accepted by `list_problem_games`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum ProblemGroup {
+    MissingParent,
+    MissingBios,
+    MissingDevice,
+    MissingChd,
+    IncompleteSet,
+    Unidentified,
+    Unreadable,
+    CoreNotInstalled,
+    DatNotInstalled,
+    PlayableOnOtherEmulator,
+    NoWorkingEmulator,
+    WrongRomRevision,
+}
+
+impl ProblemGroup {
+    pub fn parse(s: &str) -> Option<Self> {
+        match s {
+            "missingParent" | "MISSING_PARENT" => Some(Self::MissingParent),
+            "missingBios" | "MISSING_BIOS" => Some(Self::MissingBios),
+            "missingDevice" | "MISSING_DEVICE" => Some(Self::MissingDevice),
+            "missingChd" | "MISSING_CHD" => Some(Self::MissingChd),
+            "incompleteSet" | "INCOMPLETE_SET" => Some(Self::IncompleteSet),
+            "unidentified" | "UNIDENTIFIED" => Some(Self::Unidentified),
+            "unreadable" | "ARCHIVE_UNREADABLE" => Some(Self::Unreadable),
+            "coreNotInstalled" | "CORE_NOT_INSTALLED" => Some(Self::CoreNotInstalled),
+            "datNotInstalled" | "DAT_NOT_INSTALLED" => Some(Self::DatNotInstalled),
+            "playableOnOtherEmulator" => Some(Self::PlayableOnOtherEmulator),
+            "noWorkingEmulator" => Some(Self::NoWorkingEmulator),
+            "wrongRomRevision" | "WRONG_ROM_REVISION" => Some(Self::WrongRomRevision),
+            _ => None,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

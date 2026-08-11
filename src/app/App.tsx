@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { ErrorBanner } from "../components/ErrorBanner";
 import { ControllerCenter } from "../features/controller-center/ControllerCenter";
@@ -12,6 +12,10 @@ import { RomRootPanel } from "../features/onboarding/RomRootPanel";
 import { ProblemCenter } from "../features/problems/ProblemCenter";
 import { ScanProgressBar } from "../features/scanner/ScanProgressBar";
 import { useScanProgress } from "../hooks/useScanProgress";
+import {
+  type UiNavAction,
+  useUiGamepadNav,
+} from "../hooks/useUiGamepadNav";
 import { api, toAppError } from "../lib/api";
 import { formatCount } from "../lib/format";
 import type {
@@ -19,24 +23,49 @@ import type {
   AppInfo,
   ArchivePage,
   ArchiveRow,
-  ArchiveState,
+  ArchiveSort,
   RomRoot,
 } from "../types/api";
 import "./App.css";
 
-type LibraryFilter = "ALL" | "FAVORITES" | ArchiveState;
+type LibraryFilter =
+  | "ALL"
+  | "READABLE"
+  | "FAVORITES"
+  | "INDEXED"
+  | "DISK_IMAGE_INDEXED"
+  | "ARCHIVE_UNREADABLE";
 type View = "library" | "emulators" | "dats" | "problems" | "controllers" | "media";
 type LibraryLayout = "table" | "grid";
 
 const FILTERS: { id: LibraryFilter; label: string }[] = [
   { id: "ALL", label: "All archives" },
+  { id: "READABLE", label: "Readable" },
   { id: "FAVORITES", label: "Favorites" },
   { id: "INDEXED", label: "Indexed" },
   { id: "DISK_IMAGE_INDEXED", label: "Disk images" },
   { id: "ARCHIVE_UNREADABLE", label: "Unreadable" },
 ];
 
-const PAGE_SIZE = 1000;
+const SORT_OPTIONS: { id: ArchiveSort; label: string }[] = [
+  { id: "NAME_ASC", label: "Name A–Z" },
+  { id: "NAME_DESC", label: "Name Z–A" },
+  { id: "SIZE_ASC", label: "Size ↑" },
+  { id: "SIZE_DESC", label: "Size ↓" },
+];
+
+const SYSTEM_VIEWS: View[] = [
+  "emulators",
+  "dats",
+  "controllers",
+  "media",
+  "problems",
+];
+
+const GRID_COLUMNS = 4;
+
+/** High enough for full libraries; the table/grid are virtualized. */
+const PAGE_SIZE = 100_000;
 
 export default function App() {
   const [appInfo, setAppInfo] = useState<AppInfo | null>(null);
@@ -50,7 +79,10 @@ export default function App() {
   const [error, setError] = useState<AppErrorPayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeDatCount, setActiveDatCount] = useState(0);
+  const [categoryCount, setCategoryCount] = useState(0);
   const [libraryLayout, setLibraryLayout] = useState<LibraryLayout>("table");
+  const [sort, setSort] = useState<ArchiveSort>("NAME_ASC");
+  const focusIndexRef = useRef(0);
 
   const reportError = useCallback((raw: unknown) => {
     setError(toAppError(raw));
@@ -67,11 +99,18 @@ export default function App() {
   const loadArchives = useCallback(async () => {
     setLoading(true);
     try {
+      const archiveState =
+        filter === "ALL" ||
+        filter === "FAVORITES" ||
+        filter === "READABLE"
+          ? undefined
+          : filter;
       setPage(
         await api.getArchivesPage({
-          archiveState:
-            filter === "ALL" || filter === "FAVORITES" ? undefined : filter,
+          archiveState,
           favoritesOnly: filter === "FAVORITES",
+          canRunOnly: filter === "READABLE",
+          sort,
           search: debouncedSearch || undefined,
           limit: PAGE_SIZE,
         })
@@ -81,12 +120,16 @@ export default function App() {
     } finally {
       setLoading(false);
     }
-  }, [filter, debouncedSearch, reportError]);
+  }, [filter, sort, debouncedSearch, reportError]);
 
   const loadDatStatus = useCallback(async () => {
     try {
-      const dats = await api.listDatSources();
+      const [dats, cats] = await Promise.all([
+        api.listDatSources(),
+        api.getCategoryStats().catch(() => ({ count: 0 })),
+      ]);
       setActiveDatCount(dats.filter((dat) => dat.active).length);
+      setCategoryCount(cats.count ?? 0);
     } catch (raw) {
       reportError(raw);
     }
@@ -161,6 +204,159 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isRunning, roots, view, selected, loadArchives, reportError]);
 
+  const cycleFilter = useCallback(
+    (delta: number) => {
+      const idx = FILTERS.findIndex((f) => f.id === filter);
+      const next = FILTERS[(idx + delta + FILTERS.length) % FILTERS.length];
+      setView("library");
+      setFilter(next.id);
+      setSelected(null);
+      focusIndexRef.current = 0;
+    },
+    [filter]
+  );
+
+  const moveLibrarySelection = useCallback(
+    (delta: number) => {
+      const rows = page?.rows ?? [];
+      if (rows.length === 0) {
+        return;
+      }
+      setView("library");
+      const current = selected
+        ? rows.findIndex((r) => r.id === selected.id)
+        : focusIndexRef.current;
+      const base = current >= 0 ? current : 0;
+      const next = Math.max(0, Math.min(rows.length - 1, base + delta));
+      focusIndexRef.current = next;
+      setSelected(rows[next]);
+    },
+    [page?.rows, selected]
+  );
+
+  const handleGamepadAction = useCallback(
+    (action: UiNavAction) => {
+      const rows = page?.rows ?? [];
+
+      switch (action) {
+        case "NAVIGATE_UP":
+          if (view === "library") {
+            moveLibrarySelection(libraryLayout === "grid" ? -GRID_COLUMNS : -1);
+          }
+          break;
+        case "NAVIGATE_DOWN":
+          if (view === "library") {
+            moveLibrarySelection(libraryLayout === "grid" ? GRID_COLUMNS : 1);
+          }
+          break;
+        case "NAVIGATE_LEFT":
+          if (view === "library" && libraryLayout === "grid") {
+            moveLibrarySelection(-1);
+          } else {
+            cycleFilter(-1);
+          }
+          break;
+        case "NAVIGATE_RIGHT":
+          if (view === "library" && libraryLayout === "grid") {
+            moveLibrarySelection(1);
+          } else {
+            cycleFilter(1);
+          }
+          break;
+        case "PREV_FILTER":
+          cycleFilter(-1);
+          break;
+        case "NEXT_FILTER":
+          cycleFilter(1);
+          break;
+        case "SELECT":
+          if (view !== "library") {
+            setView("library");
+            break;
+          }
+          if (!selected) {
+            if (rows.length > 0) {
+              const idx = Math.min(focusIndexRef.current, rows.length - 1);
+              focusIndexRef.current = idx;
+              setSelected(rows[idx]);
+            }
+            break;
+          }
+          if (!selected.canRun) {
+            break;
+          }
+          void api.launchGame(selected.id).catch(reportError);
+          break;
+        case "BACK":
+          if (selected) {
+            setSelected(null);
+            break;
+          }
+          if (view !== "library") {
+            setView("library");
+            break;
+          }
+          document.getElementById("library-search")?.blur();
+          break;
+        case "FAVORITE":
+          if (selected) {
+            void (async () => {
+              try {
+                const next = await api.toggleFavorite(selected.id);
+                setSelected({ ...selected, isFavorite: next });
+                await loadArchives();
+              } catch (raw) {
+                reportError(raw);
+              }
+            })();
+          }
+          break;
+        case "DETAILS":
+          if (view !== "library") {
+            setView("library");
+          }
+          if (!selected && rows.length > 0) {
+            const idx = Math.min(focusIndexRef.current, rows.length - 1);
+            setSelected(rows[idx]);
+          }
+          break;
+        case "SEARCH":
+          setView("library");
+          document.getElementById("library-search")?.focus();
+          break;
+        case "CONTEXT_MENU": {
+          const idx = SYSTEM_VIEWS.indexOf(view);
+          const next =
+            idx >= 0
+              ? SYSTEM_VIEWS[(idx + 1) % SYSTEM_VIEWS.length]
+              : SYSTEM_VIEWS[0];
+          setSelected(null);
+          setView(next);
+          break;
+        }
+        default:
+          break;
+      }
+    },
+    [
+      page?.rows,
+      view,
+      libraryLayout,
+      selected,
+      cycleFilter,
+      moveLibrarySelection,
+      loadArchives,
+      reportError,
+    ]
+  );
+
+  useUiGamepadNav({
+    enabled: true,
+    // Avoid fighting button-capture / live test on the Controllers page.
+    paused: view === "controllers",
+    onAction: handleGamepadAction,
+  });
+
   async function startScan(mode: "QUICK" | "FULL" | "DEEP_VERIFY") {
     try {
       await api.startScan(mode);
@@ -175,6 +371,7 @@ export default function App() {
   const counts = useMemo(
     () => ({
       ALL: summary?.total ?? 0,
+      READABLE: summary?.readable ?? 0,
       FAVORITES: summary?.favorites ?? 0,
       INDEXED: summary?.indexed ?? 0,
       DISK_IMAGE_INDEXED: summary?.diskImages ?? 0,
@@ -195,11 +392,25 @@ export default function App() {
           <input
             id="library-search"
             type="search"
-            placeholder="Search archives…"
+            placeholder="Search games…"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            aria-label="Search archives by filename"
+            aria-label="Search by game name or filename"
           />
+          <label className="library-sort">
+            <span className="visually-hidden">Sort</span>
+            <select
+              value={sort}
+              onChange={(event) => setSort(event.target.value as ArchiveSort)}
+              aria-label="Sort library"
+            >
+              {SORT_OPTIONS.map((option) => (
+                <option key={option.id} value={option.id}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
           <button
             type="button"
             className="primary"
@@ -310,6 +521,25 @@ export default function App() {
                 </div>
               )}
 
+              {roots.length > 0 && activeDatCount > 0 && categoryCount === 0 && (
+                <div className="setup-banner" role="status">
+                  <div>
+                    <strong>Genre column is empty</strong>
+                    <p>
+                      Import a CatVer.ini under DATs to fill genres (MAME
+                      category map). DATs alone do not include genre data.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    className="primary"
+                    onClick={() => setView("dats")}
+                  >
+                    Import CatVer.ini
+                  </button>
+                </div>
+              )}
+
               {roots.length > 0 && (
                 <>
                   <div className="library-layout-toggle">
@@ -373,9 +603,9 @@ export default function App() {
               {roots.length > 0 && page && (
                 <footer className="app-status-bar">
                   <span>
-                    {formatCount(page.totalMatching)} shown
+                    {formatCount(page.rows.length)} shown
                     {page.totalMatching > page.rows.length &&
-                      ` (first ${formatCount(page.rows.length)})`}
+                      ` of ${formatCount(page.totalMatching)}`}
                   </span>
                   <span>
                     {formatCount(page.summary.total)} archives inventoried

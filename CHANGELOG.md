@@ -5,6 +5,41 @@ All notable changes to this project are recorded here. This project follows
 
 ## [Unreleased]
 
+## [0.4.0] — 2026-08-11
+
+ROM verification, safer routing, and library UX (names, genres, gamepad nav).
+
+### Added
+
+- Filename-anchored matching and launch routes: libretro loads by zip name, so
+  only exact set-name verified matches are launchable.
+- Problem Center drill-down: missing chips, playable-on-other-emulator, and no
+  working emulator groups with “Use profile” actions.
+- Unplayable detail: closest installed DAT by fewest missing chips, Tried DATs
+  list, and missing chip names.
+- Library **Readable** tab (launchable archives) above Favorites; **Unreadable**
+  tab includes every archive that cannot run (not only damaged ZIPs).
+- Xbox / standard gamepad UI navigation (D-pad, stick, A/B/X, LB/RB filters)
+  when Controller Center “UI navigation enabled” is on.
+- Library sort (name A–Z / Z–A, size ↑ / ↓) and DAT display titles in the list,
+  grid, and detail pane (filename kept as secondary).
+- Genre column via **CatVer.ini** import (DATs → Import CatVer.ini); banner when
+  genres are empty.
+- Full library load (no 1,000-row cap); status bar shows total when truncated.
+- Rebuild routes command / DATs UI control after routing rule upgrades.
+
+### Fixed
+
+- Clone/split completeness no longer drops merge/romof required chips.
+- CRC-overlap winners no longer beat filename-correct set matches (e.g. `sf2ceb`).
+- Parent presence uses parent zip contents, not filename-only checks.
+- Stale wrong-name user overrides cleared on route rebuild.
+
+### Changed
+
+- “Can this run?” for blocked games always explains across installed DATs
+  instead of a bare `Best match: INCOMPLETE_SET`.
+
 ## [0.3.0] — 2026-08-10
 
 Controllers, media, save states, favorites, and product rename.
@@ -102,7 +137,8 @@ Initial release. Phase 0 repository foundation and Phase 1 ROM inventory.
 - Dynamic SQL is limited to placeholder counts and filter shape; every value is
   bound.
 
-[Unreleased]: https://github.com/AeonSmash/aeonic-arcadia/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/AeonSmash/aeonic-arcadia/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/AeonSmash/aeonic-arcadia/releases/tag/v0.4.0
 [0.3.0]: https://github.com/AeonSmash/aeonic-arcadia/releases/tag/v0.3.0
 [0.2.1]: https://github.com/AeonSmash/aeonic-arcadia/releases/tag/v0.2.1
 [0.2.0]: https://github.com/AeonSmash/aeonic-arcadia/releases/tag/v0.2.0

@@ -5,6 +5,7 @@
 //! parameterized (SPEC.md section 43.3).
 
 pub mod archives;
+pub mod categories;
 pub mod controllers;
 pub mod dats;
 pub mod favorites;

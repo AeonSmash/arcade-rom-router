@@ -225,3 +225,157 @@ async fn missing_parent_is_detected() {
         .unwrap();
     assert!(deps.iter().any(|d| d.kind == "parent" && !d.present));
 }
+
+#[tokio::test]
+async fn split_set_verifies_when_parent_and_clone_union_complete() {
+    let (_db, roms, pool, _) = setup().await;
+
+    // Parent holds chip A; clone zip holds only the delta chip B.
+    let parent_chips = common::write_rom_set(roms.path(), "puckman.zip", 1);
+    let clone_chips = common::write_rom_set(roms.path(), "pacman.zip", 1);
+    let parent = &parent_chips[0];
+    let clone = &clone_chips[0];
+
+    let dat_path = roms.path().join("split.dat");
+    write_dat(
+        &dat_path,
+        &format!(
+            r#"<?xml version="1.0"?>
+<datafile>
+  <header><name>Split</name></header>
+  <game name="puckman">
+    <description>parent</description>
+    <rom name="parent.bin" size="{}" crc="{}"/>
+  </game>
+  <game name="pacman" cloneof="puckman" romof="puckman">
+    <rom name="parent.bin" size="{}" crc="{}" merge="parent.bin"/>
+    <rom name="chip00.bin" size="{}" crc="{}"/>
+  </game>
+</datafile>
+"#,
+            parent.size, parent.crc32, parent.size, parent.crc32, clone.size, clone.crc32
+        ),
+    );
+
+    scanner::run_scan(
+        &pool,
+        &[rom_roots::list(&pool).await.unwrap().remove(0)],
+        ScanMode::Full,
+        2,
+        1,
+        JobControl::new(),
+        Arc::new(NoopSink),
+    )
+    .await
+    .unwrap();
+
+    install_fake_core(&pool, "fbneo", roms.path()).await;
+    dat::import_dat(&pool, &dat_path.display().to_string(), "fbneo", None)
+        .await
+        .unwrap();
+
+    let page = archives::page(&pool, &archives::ArchiveQuery::default())
+        .await
+        .unwrap();
+    let clone_archive = page
+        .rows
+        .iter()
+        .find(|a| a.file_name == "pacman.zip")
+        .unwrap();
+    let results = db::matches::for_archive(&pool, clone_archive.id)
+        .await
+        .unwrap();
+    assert_eq!(results[0].state, CompatibilityState::VerifiedPlayable);
+    assert_eq!(results[0].missing_required, 0);
+    assert!(
+        results[0]
+            .machine
+            .as_ref()
+            .is_some_and(|m| m.set_name == "pacman"),
+        "must match the filename-anchored machine"
+    );
+}
+
+#[tokio::test]
+async fn wrong_clone_content_never_verified_under_filename() {
+    // Regression: sf2ceb.zip previously matched machine sf2ceub (1 local chip)
+    // and was reported VERIFIED_PLAYABLE. Filename must win.
+    let (_db, roms, pool, _) = setup().await;
+
+    let chips = common::write_rom_set(roms.path(), "sf2ceb.zip", 1);
+    let only = &chips[0];
+
+    let dat_path = roms.path().join("fb.dat");
+    write_dat(
+        &dat_path,
+        &format!(
+            r#"<?xml version="1.0"?>
+<datafile>
+  <header><name>FB</name></header>
+  <game name="sf2ce">
+    <rom name="base.bin" size="4096" crc="aaaaaaaa"/>
+    <rom name="extra.bin" size="4096" crc="bbbbbbbb"/>
+  </game>
+  <game name="sf2ceub" cloneof="sf2ce" romof="sf2ce">
+    <rom name="base.bin" size="4096" crc="aaaaaaaa" merge="base.bin"/>
+    <rom name="extra.bin" size="4096" crc="bbbbbbbb" merge="extra.bin"/>
+    <rom name="delta.bin" size="{}" crc="{}"/>
+  </game>
+  <game name="sf2ceb" cloneof="sf2ce" romof="sf2ce">
+    <rom name="3.ic171" size="524288" crc="a2355d90"/>
+    <rom name="5.ic171" size="524288" crc="c6f86e84"/>
+    <rom name="delta.bin" size="{}" crc="{}"/>
+  </game>
+</datafile>
+"#,
+            only.size, only.crc32, only.size, only.crc32
+        ),
+    );
+
+    scanner::run_scan(
+        &pool,
+        &[rom_roots::list(&pool).await.unwrap().remove(0)],
+        ScanMode::Full,
+        2,
+        1,
+        JobControl::new(),
+        Arc::new(NoopSink),
+    )
+    .await
+    .unwrap();
+
+    install_fake_core(&pool, "fbneo", roms.path()).await;
+    dat::import_dat(&pool, &dat_path.display().to_string(), "fbneo", None)
+        .await
+        .unwrap();
+
+    let archive = archives::page(&pool, &archives::ArchiveQuery::default())
+        .await
+        .unwrap()
+        .rows
+        .into_iter()
+        .find(|a| a.file_name == "sf2ceb.zip")
+        .unwrap();
+    let results = db::matches::for_archive(&pool, archive.id).await.unwrap();
+    assert_eq!(results.len(), 1);
+    assert_eq!(
+        results[0].machine.as_ref().map(|m| m.set_name.as_str()),
+        Some("sf2ceb"),
+        "must anchor to filename, not CRC-overlapping clone"
+    );
+    assert_ne!(results[0].state, CompatibilityState::VerifiedPlayable);
+    assert!(
+        matches!(
+            results[0].state,
+            CompatibilityState::IncompleteSet
+                | CompatibilityState::KnownSetNameUnverifiedContent
+        ),
+        "got {:?}",
+        results[0].state
+    );
+    assert!(results[0].missing_required >= 2);
+
+    let route = routing::choose_route(&pool, archive.id).await.unwrap();
+    assert!(route.is_some());
+    assert!(!route.unwrap().launchable);
+}

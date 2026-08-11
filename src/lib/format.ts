@@ -1,6 +1,17 @@
-import type { ArchiveState } from "../types/api";
+import type { ArchiveRow, ArchiveState } from "../types/api";
 
 const NUMBER_FORMAT = new Intl.NumberFormat();
+
+/** Prefer DAT description; fall back to set name or filename stem. */
+export function archiveTitle(row: Pick<ArchiveRow, "displayName" | "setName" | "fileName">): string {
+  if (row.displayName?.trim()) {
+    return row.displayName.trim();
+  }
+  if (row.setName?.trim()) {
+    return row.setName.trim();
+  }
+  return row.fileName.replace(/\.(zip|7z)$/i, "");
+}
 
 export function formatCount(value: number): string {
   return NUMBER_FORMAT.format(value);
@@ -53,10 +64,10 @@ const STATE_DESCRIPTIONS: Record<ArchiveState, StateDescription> = {
       "CHD recorded by name and size. Disk images are verified on demand, not during a normal scan.",
   },
   ARCHIVE_UNREADABLE: {
-    label: "Unreadable",
+    label: "Can't run",
     tone: "danger",
     description:
-      "The archive could not be opened. It may be damaged or incomplete.",
+      "This archive cannot be launched — the ZIP may be damaged, or no installed DAT has a complete set.",
   },
 };
 

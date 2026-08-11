@@ -165,9 +165,10 @@ export function ControllerCenter({ onError }: Props) {
         <div>
           <h2>Controllers</h2>
           <p>
-            Router navigation uses the Gamepad API. RetroArch still owns in-game
-            input. Bind an Exit combo here; it is applied via a Router-owned
-            --appendconfig fragment and never edits retroarch.cfg.
+            Xbox pads navigate the library with D-pad / left stick, A to play, B
+            to go back, X to favorite, LB/RB for filters. RetroArch still owns
+            in-game input. Bind Exit here via a Router-owned --appendconfig
+            fragment — never edits retroarch.cfg.
           </p>
         </div>
         <div className="panel-page-actions">

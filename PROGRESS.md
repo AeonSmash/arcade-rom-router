@@ -6,6 +6,7 @@ Phase 12 — Controllers, Media, Save States (Favorites + EmuMovies sync options
 
 ## Release
 
+**v0.4.0** — ROM verification, safer routing, library UX (names, genres, gamepad).
 **v0.3.0** — Controllers, media, save states, favorites, EmuMovies sync, rename.
 **v0.2.1** — RetroArch discovery hardening and FinalBurn Neo core binding fix.
 **v0.2.0** — DAT import through RetroArch launch (Phases 2–7).
@@ -41,7 +42,8 @@ Phase 12 — Controllers, Media, Save States (Favorites + EmuMovies sync options
 ### Phase 4 — Dependencies
 
 - [x] Parent / BIOS / CHD resolution against inventory
-- [x] Problem Center aggregates
+- [x] Problem Center aggregates with drill-down (missing chips, other-emulator routes)
+- [x] Filename-anchored matching; full merge/romof required list; parent zip content union
 
 ### Phase 5 — Emulator profiles
 
@@ -96,10 +98,15 @@ Phase 12 — Controllers, Media, Save States (Favorites + EmuMovies sync options
 
 Nothing.
 
+## Recently completed
+
+Shipped in **v0.4.0** (see CHANGELOG): matching/routing hardening, Problem
+Center drill-down, Readable/Unreadable tabs, gamepad nav, sort + DAT titles,
+CatVer genres, full library page size.
+
 ## Next
 
 - Controller Center / cabinet mode
-- Wire gamepad FAVORITE action into library navigation
 - Standalone MAME profile type (optional)
 - Core Online Updater convenience (optional)
 - Deeper packaging (split/merged) edge cases
@@ -118,12 +125,11 @@ Nothing.
 ## Known issues
 
 - Launch does not yet wait for process exit to record `exit_code` asynchronously.
-- Problem Center lists counts but does not yet filter the library table on click.
 - CHD presence uses path/name heuristics, not SHA-1 verification.
 - Fake/help probe for RetroArch treats any process start with a code as OK.
 
 ## Tests
 
-- 96 passing (unit + inventory + DAT/match + favorites/EmuMovies parse)
+- 86 lib unit tests passing (plus integration suites)
 - 0 failing
 - TypeScript `tsc --strict` clean

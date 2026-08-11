@@ -17,8 +17,14 @@
 
 .archive-detail-header h2 {
   margin: 0;
-  font-family: var(--font-mono);
   font-size: var(--text-lg);
+  word-break: break-word;
+}
+
+.archive-detail-filename {
+  margin: var(--space-1) 0 0;
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
   word-break: break-all;
 }
 
@@ -167,6 +173,46 @@
   margin: 0 0 var(--space-3);
   color: var(--text-secondary);
   font-size: var(--text-sm);
+}
+
+.archive-detail-missing {
+  margin: 0 0 var(--space-3);
+}
+
+.archive-detail-missing-label {
+  margin: 0 0 var(--space-2) !important;
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+}
+
+.archive-detail-chip-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.archive-detail-chip-list li {
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+}
+
+.archive-detail-chip-list code {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  padding: 1px 4px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-0);
+}
+
+.match-missing-chips {
+  margin: var(--space-1) 0 0 !important;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  word-break: break-all;
 }
 
 .can-run-yes {

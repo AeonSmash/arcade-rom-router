@@ -1,8 +1,8 @@
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 
 import { StatusChip } from "../../components/StatusChip";
-import { formatBytes, formatCount } from "../../lib/format";
+import { archiveTitle, formatBytes, formatCount } from "../../lib/format";
 import type { ArchiveRow } from "../../types/api";
 import "./ArchiveTable.css";
 
@@ -31,6 +31,16 @@ export function ArchiveTable({ rows, loading, selectedId, onSelect }: Props) {
     overscan: 12,
   });
 
+  useEffect(() => {
+    if (selectedId == null) {
+      return;
+    }
+    const index = rows.findIndex((row) => row.id === selectedId);
+    if (index >= 0) {
+      virtualizer.scrollToIndex(index, { align: "auto" });
+    }
+  }, [selectedId, rows, virtualizer]);
+
   if (!loading && rows.length === 0) {
     return (
       <div className="archive-table-empty">
@@ -46,6 +56,7 @@ export function ArchiveTable({ rows, loading, selectedId, onSelect }: Props) {
     <div className="archive-table">
       <div className="archive-table-head" role="presentation">
         <span>Name</span>
+        <span>Genre</span>
         <span className="numeric">Members</span>
         <span>CRC indexed</span>
         <span className="numeric">Size</span>
@@ -89,7 +100,10 @@ export function ArchiveTable({ rows, loading, selectedId, onSelect }: Props) {
                       ★{" "}
                     </span>
                   ) : null}
-                  {row.fileName}
+                  <span className="archive-title">{archiveTitle(row)}</span>
+                  {row.displayName && (
+                    <span className="archive-file">{row.fileName}</span>
+                  )}
                   {row.unsafeMemberCount > 0 && (
                     <span
                       className="archive-flag"
@@ -98,6 +112,9 @@ export function ArchiveTable({ rows, loading, selectedId, onSelect }: Props) {
                       unsafe names
                     </span>
                   )}
+                </span>
+                <span className="archive-genre" title={row.genre ?? undefined}>
+                  {row.genre ?? "—"}
                 </span>
                 <span className="numeric">
                   {row.archiveState === "DISK_IMAGE_INDEXED"
@@ -109,7 +126,11 @@ export function ArchiveTable({ rows, loading, selectedId, onSelect }: Props) {
                 </span>
                 <span className="numeric">{formatBytes(row.sizeBytes)}</span>
                 <span>
-                  <StatusChip state={row.archiveState} />
+                  <StatusChip
+                    state={
+                      row.canRun ? row.archiveState : "ARCHIVE_UNREADABLE"
+                    }
+                  />
                 </span>
               </div>
             );

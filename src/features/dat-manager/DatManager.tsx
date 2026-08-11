@@ -3,7 +3,11 @@ import { open } from "@tauri-apps/plugin-dialog";
 
 import { api } from "../../lib/api";
 import { formatCount, formatTimestamp } from "../../lib/format";
-import type { DatSource, EmulatorProfile } from "../../types/api";
+import type {
+  CategoryStats,
+  DatSource,
+  EmulatorProfile,
+} from "../../types/api";
 import "./DatManager.css";
 
 interface Props {
@@ -16,15 +20,18 @@ export function DatManager({ onError, onLibraryChanged }: Props) {
   const [profiles, setProfiles] = useState<EmulatorProfile[]>([]);
   const [profileId, setProfileId] = useState("mame2003plus");
   const [busy, setBusy] = useState(false);
+  const [categoryStats, setCategoryStats] = useState<CategoryStats | null>(null);
 
   const reload = useCallback(async () => {
     try {
-      const [datList, profileList] = await Promise.all([
+      const [datList, profileList, cats] = await Promise.all([
         api.listDatSources(),
         api.listEmulatorProfiles(),
+        api.getCategoryStats(),
       ]);
       setDats(datList);
       setProfiles(profileList);
+      setCategoryStats(cats);
     } catch (error) {
       onError(error);
     }
@@ -80,6 +87,39 @@ export function DatManager({ onError, onLibraryChanged }: Props) {
     }
   }
 
+  async function rebuildRoutes() {
+    try {
+      setBusy(true);
+      await api.rebuildLibraryRoutes();
+      onLibraryChanged();
+    } catch (error) {
+      onError(error);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function importCatver() {
+    try {
+      const selected = await open({
+        multiple: false,
+        title: "Import CatVer.ini (genres)",
+        filters: [{ name: "CatVer.ini", extensions: ["ini"] }],
+      });
+      if (typeof selected !== "string") {
+        return;
+      }
+      setBusy(true);
+      const stats = await api.importCatver(selected);
+      setCategoryStats(stats);
+      onLibraryChanged();
+    } catch (error) {
+      onError(error);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <section className="panel-page" aria-label="DAT manager">
       <header className="panel-page-header">
@@ -110,11 +150,34 @@ export function DatManager({ onError, onLibraryChanged }: Props) {
           <button type="button" className="primary" disabled={busy} onClick={() => void importDat()}>
             Import DAT
           </button>
+          <button
+            type="button"
+            className={
+              !categoryStats || categoryStats.count === 0 ? "primary" : undefined
+            }
+            disabled={busy}
+            onClick={() => void importCatver()}
+          >
+            Import CatVer.ini
+          </button>
           <button type="button" disabled={busy} onClick={() => void rematch()}>
             Rematch library
           </button>
+          <button type="button" disabled={busy} onClick={() => void rebuildRoutes()}>
+            Rebuild routes
+          </button>
         </div>
       </header>
+
+      <p className="dat-catver-status">
+        {categoryStats && categoryStats.count > 0
+          ? `${formatCount(categoryStats.count)} genres loaded${
+              categoryStats.importedAt
+                ? ` · ${formatTimestamp(categoryStats.importedAt)}`
+                : ""
+            }`
+          : "No CatVer.ini imported yet — Genre column stays empty until you import one."}
+      </p>
 
       {dats.length === 0 ? (
         <div className="panel-empty dat-empty">

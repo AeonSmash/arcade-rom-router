@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 
 import { api } from "../../lib/api";
 import {
+  archiveTitle,
   describeArchiveState,
   formatBytes,
   formatTimestamp,
@@ -114,14 +115,35 @@ export function ArchiveDetail({
     media?.assets.find((a) => a.kind === "BOX") ??
     media?.assets.find((a) => a.kind === "TITLE") ??
     media?.assets[0];
+  const archiveStem = archive.fileName.replace(/\.(zip|7z)$/i, "").toLowerCase();
+  const exactNameMatches = (detail?.matches ?? []).filter(
+    (m) => m.machine?.setName?.toLowerCase() === archiveStem,
+  );
+  const datTrials = (
+    exactNameMatches.length > 0 ? exactNameMatches : (detail?.matches ?? [])
+  )
+    .slice()
+    .sort(
+      (a, b) =>
+        a.missingRequired - b.missingRequired ||
+        b.matchedRequired - a.matchedRequired,
+    );
+  const closestTrial = datTrials[0];
+  const closestMissing = closestTrial?.missingChips ?? [];
+  const chipsOf = (m: { missingChips?: string[] }) => m.missingChips ?? [];
 
   return (
-    <aside className="archive-detail" aria-label={`Details for ${archive.fileName}`}>
+    <aside className="archive-detail" aria-label={`Details for ${archiveTitle(archive)}`}>
       <header className="archive-detail-header">
-        <h2 title={archive.fileName}>
-          {isFavorite ? "★ " : ""}
-          {archive.fileName}
-        </h2>
+        <div>
+          <h2 title={archive.fileName}>
+            {isFavorite ? "★ " : ""}
+            {archiveTitle(archive)}
+          </h2>
+          {archive.displayName && (
+            <p className="archive-detail-filename mono">{archive.fileName}</p>
+          )}
+        </div>
         <button type="button" className="quiet" onClick={onClose} aria-label="Close details">
           ✕
         </button>
@@ -139,6 +161,27 @@ export function ArchiveDetail({
         <div className={`can-run can-run-${detail.canRun.toLowerCase()}`}>
           <strong>Can this run? {detail.canRun}</strong>
           <p>{detail.canRunReason}</p>
+          {!canPlay && closestMissing.length > 0 && (
+            <div className="archive-detail-missing">
+              <p className="archive-detail-missing-label">
+                Missing for closest DAT
+                {closestTrial
+                  ? ` (${closestTrial.profileDisplayName ?? closestTrial.emulatorProfileId})`
+                  : ""}
+                :
+              </p>
+              <ul className="archive-detail-chip-list">
+                {closestMissing.slice(0, 12).map((chip) => (
+                  <li key={chip}>
+                    <code>{chip}</code>
+                  </li>
+                ))}
+                {closestMissing.length > 12 && (
+                  <li>+{closestMissing.length - 12} more</li>
+                )}
+              </ul>
+            </div>
+          )}
           <div className="archive-detail-row-actions">
             <button
               type="button"
@@ -180,6 +223,12 @@ export function ArchiveDetail({
         <dd>{formatBytes(archive.sizeBytes)}</dd>
         <dt>Inventory</dt>
         <dd>{state.label}</dd>
+        {archive.genre && (
+          <>
+            <dt>Genre</dt>
+            <dd>{archive.genre}</dd>
+          </>
+        )}
         {detail?.selectedRoute && (
           <>
             <dt>Route</dt>
@@ -275,26 +324,42 @@ export function ArchiveDetail({
         </>
       )}
 
-      {detail && detail.matches.length > 0 && (
+      {detail && datTrials.length > 0 && (
         <>
-          <h3 className="archive-detail-section">Matches</h3>
+          <h3 className="archive-detail-section">Tried DATs</h3>
           <ul className="match-list">
-            {detail.matches.map((match) => (
-              <li key={match.id}>
-                <strong>
-                  {match.machine?.description ?? match.machine?.setName ?? match.machineId}
-                </strong>
-                <p>
-                  {match.profileDisplayName ?? match.emulatorProfileId}
-                  {" · "}
-                  {match.state}
-                  {" · "}
-                  {match.confidence}
-                  {" · "}
-                  {match.matchedRequired}/{match.matchedRequired + match.missingRequired} required
-                </p>
-              </li>
-            ))}
+            {datTrials.map((match) => {
+              const exact =
+                match.machine?.setName?.toLowerCase() === archiveStem;
+              const required =
+                match.matchedRequired + match.missingRequired + match.wrongRequired;
+              return (
+                <li key={match.id}>
+                  <strong>
+                    {match.profileDisplayName ?? match.emulatorProfileId}
+                    {exact ? "" : " (different set name)"}
+                  </strong>
+                  <p>
+                    {match.machine?.setName ?? "—"}
+                    {" · "}
+                    {match.state}
+                    {" · "}
+                    {match.matchedRequired}/{required} required
+                    {match.missingRequired > 0
+                      ? ` · ${match.missingRequired} missing`
+                      : ""}
+                  </p>
+                  {exact && chipsOf(match).length > 0 && (
+                    <p className="match-missing-chips">
+                      {chipsOf(match).slice(0, 8).join(", ")}
+                      {chipsOf(match).length > 8
+                        ? `, +${chipsOf(match).length - 8} more`
+                        : ""}
+                    </p>
+                  )}
+                </li>
+              );
+            })}
           </ul>
         </>
       )}

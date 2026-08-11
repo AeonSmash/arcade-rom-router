@@ -3,14 +3,21 @@ use tauri::State;
 use crate::db::{archives, favorites, matches as matches_db, routes};
 use crate::error::{AppError, AppResult};
 use crate::launch;
-use crate::matcher;
+use crate::matcher::{self, normalize_set_name};
 use crate::model::{
-    CompatibilityState, GameDetail, LaunchResult, ProblemSummary, RoutePreferenceMode, RouteRow,
+    GameDetail, LaunchResult, ProblemGameRow, ProblemGroup, ProblemSummary, RoutePreferenceMode,
+    RouteRow,
 };
 use crate::routing;
 use crate::state::AppState;
 
-fn can_run_from(route: Option<&RouteRow>, matches: &[crate::model::MatchResultRow]) -> (String, String) {
+fn can_run_from(
+    archive_file_name: &str,
+    route: Option<&RouteRow>,
+    matches: &[crate::model::MatchResultRow],
+) -> (String, String) {
+    let stem = normalize_set_name(archive_file_name);
+
     if let Some(route) = route {
         if route.launchable {
             return (
@@ -21,41 +28,13 @@ fn can_run_from(route: Option<&RouteRow>, matches: &[crate::model::MatchResultRo
                     .unwrap_or_else(|| "A verified route is ready.".into()),
             );
         }
-        return (
-            "NO".into(),
-            route
-                .selection_reason
-                .clone()
-                .unwrap_or_else(|| "The selected route is not launchable.".into()),
-        );
+        // Prefer a fresh multi-DAT explanation over a stale "Best match: …" reason.
+        let reason = routing::unplayable_reason(&stem, matches);
+        return ("NO".into(), reason);
     }
 
-    if let Some(best) = matches.first() {
-        let reason = match best.state {
-            CompatibilityState::MissingParent => "Matched, but a parent set is missing.",
-            CompatibilityState::MissingBios => "Matched, but a required BIOS set is missing.",
-            CompatibilityState::MissingChd => "Matched, but a required CHD is missing.",
-            CompatibilityState::IncompleteSet => "ROM contents are incomplete for the matched set.",
-            CompatibilityState::CoreNotInstalled => {
-                "Matched to a definition, but the emulator core is not installed."
-            }
-            CompatibilityState::DatNotInstalled => "No DAT is active for a matching profile.",
-            CompatibilityState::Unidentified => "No matching machine definition was found.",
-            other => other.as_str(),
-        };
-        let can = if matches!(
-            best.state,
-            CompatibilityState::IncompleteSet
-                | CompatibilityState::MissingParent
-                | CompatibilityState::MissingBios
-                | CompatibilityState::MissingChd
-                | CompatibilityState::CoreNotInstalled
-        ) {
-            "MAYBE"
-        } else {
-            "NO"
-        };
-        return (can.into(), reason.into());
+    if !matches.is_empty() {
+        return ("NO".into(), routing::unplayable_reason(&stem, matches));
     }
 
     (
@@ -80,7 +59,8 @@ pub async fn get_game_detail(state: State<'_, AppState>, archive_id: i64) -> App
     let route_list = routes::for_archive(&state.pool, archive_id).await?;
     let selected = route_list.iter().find(|r| r.is_selected).cloned();
     let dependencies = matcher::dependencies_for_archive(&state.pool, archive_id).await?;
-    let (mut can_run, mut can_run_reason) = can_run_from(selected.as_ref(), &matches);
+    let (mut can_run, mut can_run_reason) =
+        can_run_from(&archive.file_name, selected.as_ref(), &matches);
     if matches.is_empty() && selected.is_none() {
         let active_dats: i64 =
             sqlx::query_scalar("SELECT COUNT(*) FROM dat_sources WHERE active = 1")
@@ -114,8 +94,35 @@ pub async fn get_problem_summary(state: State<'_, AppState>) -> AppResult<Proble
 }
 
 #[tauri::command]
+pub async fn list_problem_games(
+    state: State<'_, AppState>,
+    group: String,
+    limit: Option<i64>,
+    offset: Option<i64>,
+) -> AppResult<Vec<ProblemGameRow>> {
+    let group = ProblemGroup::parse(&group).ok_or_else(|| {
+        AppError::user(
+            "Unknown problem group",
+            format!("“{group}” is not a recognized Problem Center category."),
+        )
+    })?;
+    matches_db::list_problem_games(
+        &state.pool,
+        group,
+        limit.unwrap_or(200),
+        offset.unwrap_or(0),
+    )
+    .await
+}
+
+#[tauri::command]
 pub async fn choose_route(state: State<'_, AppState>, archive_id: i64) -> AppResult<Option<RouteRow>> {
     routing::choose_route(&state.pool, archive_id).await
+}
+
+#[tauri::command]
+pub async fn rebuild_library_routes(state: State<'_, AppState>) -> AppResult<u64> {
+    routing::rebuild_library_routes(&state.pool).await
 }
 
 #[tauri::command]

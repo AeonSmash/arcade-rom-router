@@ -2,7 +2,9 @@ use tauri::State;
 
 use crate::db::archives::{self, ArchiveQuery};
 use crate::error::AppResult;
-use crate::model::{ArchiveMemberRow, ArchivePage, ArchiveState, LibrarySummary};
+use crate::model::{
+    ArchiveMemberRow, ArchivePage, ArchiveSort, ArchiveState, LibrarySummary,
+};
 use crate::state::AppState;
 
 #[tauri::command]
@@ -12,14 +14,22 @@ pub async fn get_archives_page(
     archive_state: Option<ArchiveState>,
     search: Option<String>,
     favorites_only: Option<bool>,
+    can_run_only: Option<bool>,
+    sort: Option<String>,
     limit: Option<i64>,
     offset: Option<i64>,
 ) -> AppResult<ArchivePage> {
+    let sort = sort
+        .as_deref()
+        .and_then(ArchiveSort::parse)
+        .unwrap_or(ArchiveSort::NameAsc);
     let query = ArchiveQuery {
         rom_root_id,
         state: archive_state,
         search,
         favorites_only: favorites_only.unwrap_or(false),
+        can_run_only: can_run_only.unwrap_or(false),
+        sort,
         limit: limit.unwrap_or(200),
         offset: offset.unwrap_or(0),
     };

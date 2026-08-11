@@ -85,6 +85,17 @@
   width: 260px;
 }
 
+.library-sort select {
+  min-width: 120px;
+  height: 34px;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-0);
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+}
+
 .app-body {
   display: flex;
   flex: 1;

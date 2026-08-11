@@ -15,7 +15,8 @@ pub struct NewRoute {
 }
 
 pub async fn clear_for_archive(pool: &SqlitePool, archive_id: i64) -> AppResult<()> {
-    sqlx::query("DELETE FROM routes WHERE archive_id = ?1 AND user_override = 0")
+    // Caller reinserts a still-valid user override after rebuild.
+    sqlx::query("DELETE FROM routes WHERE archive_id = ?1")
         .bind(archive_id)
         .execute(pool)
         .await?;

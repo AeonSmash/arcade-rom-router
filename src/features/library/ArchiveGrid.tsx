@@ -1,7 +1,8 @@
 import { convertFileSrc } from "@tauri-apps/api/core";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { api } from "../../lib/api";
+import { archiveTitle } from "../../lib/format";
 import type { ArchiveRow } from "../../types/api";
 import "./ArchiveGrid.css";
 
@@ -15,6 +16,11 @@ interface Props {
 /** Artwork-forward grid; falls back to a letter tile when no local art exists. */
 export function ArchiveGrid({ rows, loading, selectedId, onSelect }: Props) {
   const [artById, setArtById] = useState<Record<number, string>>({});
+  const selectedRef = useRef<HTMLButtonElement | null>(null);
+
+  useEffect(() => {
+    selectedRef.current?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }, [selectedId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -58,10 +64,12 @@ export function ArchiveGrid({ rows, loading, selectedId, onSelect }: Props) {
     <div className="archive-grid" role="list">
       {rows.map((row) => {
         const art = artById[row.id];
-        const letter = row.fileName.charAt(0).toUpperCase();
+        const title = archiveTitle(row);
+        const letter = title.charAt(0).toUpperCase();
         return (
           <button
             key={row.id}
+            ref={row.id === selectedId ? selectedRef : undefined}
             type="button"
             role="listitem"
             className={`archive-grid-card ${
@@ -78,7 +86,7 @@ export function ArchiveGrid({ rows, loading, selectedId, onSelect }: Props) {
             </div>
             <span className="archive-grid-name" title={row.fileName}>
               {row.isFavorite ? "★ " : ""}
-              {row.fileName.replace(/\.zip$/i, "")}
+              {title}
             </span>
           </button>
         );

@@ -1,14 +1,34 @@
 //! DAT definition import (Phase 2).
 
+pub mod catver;
 pub mod parser;
 
 use sqlx::SqlitePool;
 use tracing::info;
 
-use crate::db::{self, dats, machines as machines_db};
+use crate::db::{self, categories, dats, machines as machines_db};
 use crate::error::{AppError, AppResult};
 use crate::matcher;
-use crate::model::DatSource;
+use crate::model::{CategoryStats, DatSource};
+
+/// Import a CatVer.ini `[Category]` map used for the library Genre column.
+pub async fn import_catver(pool: &SqlitePool, path: &str) -> AppResult<CategoryStats> {
+    let file_path = std::path::Path::new(path);
+    if !file_path.is_file() {
+        return Err(AppError::user(
+            "CatVer file not found",
+            format!("Nothing exists at this location:\n{path}"),
+        ));
+    }
+    let entries = catver::parse_file(file_path)?;
+    let stats = categories::replace_all(pool, &entries, path).await?;
+    info!(count = stats.count, path, "CatVer categories imported");
+    Ok(stats)
+}
+
+pub async fn category_stats(pool: &SqlitePool) -> AppResult<CategoryStats> {
+    categories::stats(pool).await
+}
 
 /// Imports a DAT file and associates it with an emulator profile.
 ///

@@ -228,3 +228,55 @@ pub async fn local_required_roms(
         })
         .collect())
 }
+
+/// Full required ROM list including chips that DAT merge/romof inheritance
+/// places in a parent zip. Still skips optional and nodump entries.
+pub async fn required_roms_full(
+    pool: &SqlitePool,
+    machine_id: i64,
+) -> AppResult<Vec<MachineRomRow>> {
+    let roms = roms_for_machine(pool, machine_id).await?;
+    Ok(roms
+        .into_iter()
+        .filter(|r| !r.optional)
+        .filter(|r| !matches!(r.status.as_deref(), Some("nodump")))
+        .collect())
+}
+
+/// Walk `clone_of` then `rom_of` upward within the same DAT. The seed machine
+/// is first; ancestors follow. Cycles are refused via a visited set.
+pub async fn chain_of(pool: &SqlitePool, machine_id: i64) -> AppResult<Vec<MachineSummary>> {
+    let mut out = Vec::new();
+    let Some(seed) = get_summary(pool, machine_id).await? else {
+        return Ok(out);
+    };
+    let dat_id = seed.dat_source_id;
+    let mut visited = std::collections::HashSet::new();
+    visited.insert(seed.set_name.to_ascii_lowercase());
+    out.push(seed);
+
+    let mut cursor = out[0].clone();
+    loop {
+        let parent_name = cursor
+            .clone_of
+            .as_ref()
+            .or(cursor.rom_of.as_ref())
+            .cloned();
+        let Some(parent_name) = parent_name else {
+            break;
+        };
+        let key = parent_name.to_ascii_lowercase();
+        if !visited.insert(key) {
+            break;
+        }
+        let Some(parent_id) = find_by_set_name(pool, dat_id, &parent_name).await? else {
+            break;
+        };
+        let Some(parent) = get_summary(pool, parent_id).await? else {
+            break;
+        };
+        out.push(parent.clone());
+        cursor = parent;
+    }
+    Ok(out)
+}

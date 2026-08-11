@@ -5,7 +5,9 @@ import type {
   AppInfo,
   ArchiveMemberRow,
   ArchivePage,
+  ArchiveSort,
   ArchiveState,
+  CategoryStats,
   ControllerDevice,
   ControllerSettings,
   DatSource,
@@ -22,6 +24,8 @@ import type {
   LaunchResult,
   LibrarySummary,
   MediaAsset,
+  ProblemGameRow,
+  ProblemGroup,
   ProblemSummary,
   RetroArchDiscovery,
   RomRoot,
@@ -77,6 +81,8 @@ export const api = {
     archiveState?: ArchiveState;
     search?: string;
     favoritesOnly?: boolean;
+    canRunOnly?: boolean;
+    sort?: ArchiveSort;
     limit?: number;
     offset?: number;
   }) => invoke<ArchivePage>("get_archives_page", options),
@@ -103,6 +109,9 @@ export const api = {
     }),
   deactivateDat: (id: number) => invoke<void>("deactivate_dat", { id }),
   rematchLibrary: () => invoke<number>("rematch_library"),
+  importCatver: (path: string) =>
+    invoke<CategoryStats>("import_catver", { path }),
+  getCategoryStats: () => invoke<CategoryStats>("get_category_stats"),
 
   listEmulatorProfiles: () =>
     invoke<EmulatorProfile[]>("list_emulator_profiles"),
@@ -118,8 +127,19 @@ export const api = {
   getGameDetail: (archiveId: number) =>
     invoke<GameDetail>("get_game_detail", { archiveId }),
   getProblemSummary: () => invoke<ProblemSummary>("get_problem_summary"),
+  listProblemGames: (
+    group: ProblemGroup,
+    limit?: number,
+    offset?: number,
+  ) =>
+    invoke<ProblemGameRow[]>("list_problem_games", {
+      group,
+      limit: limit ?? null,
+      offset: offset ?? null,
+    }),
   chooseRoute: (archiveId: number) =>
     invoke<RouteRow | null>("choose_route", { archiveId }),
+  rebuildLibraryRoutes: () => invoke<number>("rebuild_library_routes"),
   setGameRouteOverride: (archiveId: number, routeId: number | null) =>
     invoke<void>("set_game_route_override", { archiveId, routeId }),
   setRoutePreferenceMode: (mode: RoutePreferenceMode) =>

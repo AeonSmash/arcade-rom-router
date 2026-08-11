@@ -69,6 +69,12 @@ export interface RomRoot {
   lastScanAt: string | null;
 }
 
+export type ArchiveSort =
+  | "NAME_ASC"
+  | "NAME_DESC"
+  | "SIZE_ASC"
+  | "SIZE_DESC";
+
 export interface ArchiveRow {
   id: number;
   romRootId: number;
@@ -84,6 +90,20 @@ export interface ArchiveRow {
   errorDetail: string | null;
   lastScannedAt: string;
   isFavorite: boolean;
+  /** False when damaged or no launchable emulator route exists. */
+  canRun: boolean;
+  /** DAT machine description when matched. */
+  displayName: string | null;
+  /** DAT set name when matched. */
+  setName: string | null;
+  /** CatVer category / genre when imported. */
+  genre: string | null;
+}
+
+export interface CategoryStats {
+  count: number;
+  sourcePath: string | null;
+  importedAt: string | null;
 }
 
 export interface ArchiveMemberRow {
@@ -102,6 +122,7 @@ export interface LibrarySummary {
   indexed: number;
   diskImages: number;
   unreadable: number;
+  readable: number;
   favorites: number;
 }
 
@@ -220,6 +241,7 @@ export interface MatchResultRow {
   createdAt: string;
   machine: MachineSummary | null;
   profileDisplayName: string | null;
+  missingChips: string[];
 }
 
 export interface RouteRow {
@@ -256,6 +278,20 @@ export interface GameDetail {
   isFavorite: boolean;
 }
 
+export type ProblemGroup =
+  | "missingParent"
+  | "missingBios"
+  | "missingDevice"
+  | "missingChd"
+  | "incompleteSet"
+  | "unidentified"
+  | "unreadable"
+  | "coreNotInstalled"
+  | "datNotInstalled"
+  | "playableOnOtherEmulator"
+  | "noWorkingEmulator"
+  | "wrongRomRevision";
+
 export interface ProblemSummary {
   missingParent: number;
   missingBios: number;
@@ -266,6 +302,24 @@ export interface ProblemSummary {
   unreadable: number;
   coreNotInstalled: number;
   datNotInstalled: number;
+  playableOnOtherEmulator: number;
+  noWorkingEmulator: number;
+  wrongRomRevision: number;
+}
+
+export interface ProblemGameRow {
+  archiveId: number;
+  fileName: string;
+  setName: string | null;
+  state: CompatibilityState;
+  emulatorProfileId: string;
+  profileDisplayName: string | null;
+  missingCount: number;
+  requiredCount: number;
+  missingChips: string[];
+  worksOnProfiles: string[];
+  suggestion: string | null;
+  matchResultId: number;
 }
 
 export interface LaunchResult {

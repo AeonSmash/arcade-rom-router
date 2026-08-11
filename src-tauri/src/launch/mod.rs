@@ -63,7 +63,7 @@ pub async fn launch_game(
     }
 
     use sqlx::Row;
-    let row = sqlx::query("SELECT path FROM archives WHERE id = ?1")
+    let row = sqlx::query("SELECT path, file_name FROM archives WHERE id = ?1")
         .bind(archive_id)
         .fetch_optional(pool)
         .await?
@@ -74,11 +74,27 @@ pub async fn launch_game(
             )
         })?;
     let content_path: String = row.get("path");
+    let file_name: String = row.get("file_name");
     if !Path::new(&content_path).is_file() {
         return Err(AppError::user(
             "ROM file missing",
             format!("The archive is no longer at:\n{content_path}"),
         ));
+    }
+
+    // Cores load by zip filename — refuse routes whose DAT set name disagrees.
+    let archive_stem = crate::matcher::normalize_set_name(&file_name);
+    if let Some(set_name) = route.machine_set_name.as_deref() {
+        if !set_name.eq_ignore_ascii_case(&archive_stem) && !allow_unverified {
+            return Err(AppError::user(
+                "Wrong set identity",
+                format!(
+                    "This route matched DAT set “{set_name}”, but the archive is “{archive_stem}.zip”. \
+                     Arcade cores load by filename, so that launch would use the wrong (or incomplete) set. \
+                     Rematch the library or pick a route whose set name matches the zip."
+                ),
+            ));
+        }
     }
 
     let profile = profiles::get(pool, &route.emulator_profile_id)

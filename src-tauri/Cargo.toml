@@ -1,6 +1,6 @@
 [package]
 name = "aeonic-arcadia"
-version = "0.3.0"
+version = "0.4.0"
 description = "Evidence-based arcade ROM identification and automatic emulator routing."
 authors = ["Aeonic Arcadia contributors"]
 edition = "2021"

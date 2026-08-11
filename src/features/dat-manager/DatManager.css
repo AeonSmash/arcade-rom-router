@@ -36,6 +36,12 @@
   color: var(--text-tertiary);
 }
 
+.dat-catver-status {
+  margin: calc(-1 * var(--space-2)) 0 0;
+  color: var(--text-tertiary);
+  font-size: var(--text-sm);
+}
+
 .dat-empty {
   max-width: 62ch;
   line-height: 1.45;
